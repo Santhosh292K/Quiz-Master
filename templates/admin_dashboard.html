@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Navigation</title>
+    <link href="/static/admin_dashboard.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div style="font-size: 150%;color: white;font-weight: bold;">
+                Quiz Master
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
+                    Home
+                </a>
+                <a href="{{ url_for('quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
+                    Quiz
+                </a>
+                <a href="{{ url_for('summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
+                    Summary
+                </a>
+                <a href="{{ url_for('users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
+                    Users
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+</body>
+</html>

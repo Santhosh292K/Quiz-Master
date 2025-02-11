@@ -1,0 +1,93 @@
+<!-- templates/user_dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Quiz Master</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold">Quiz Master</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm">Welcome, {{ user.full_name }}</span>
+                    <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-lg text-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Profile Section -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-800">Your Profile</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Full Name</p>
+                        <p class="text-lg font-medium">{{ user.full_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Email</p>
+                        <p class="text-lg font-medium">{{ user.email }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Qualification</p>
+                        <p class="text-lg font-medium">{{ user.qualification }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Date of Birth</p>
+                        <p class="text-lg font-medium">{{ user.dob.strftime('%B %d, %Y') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Take Quiz</h3>
+                    <i class="fas fa-book-open text-blue-600 text-xl"></i>
+                </div>
+                <p class="text-gray-600 mb-4">Start a new quiz and test your knowledge.</p>
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Start Quiz
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">My Results</h3>
+                    <i class="fas fa-chart-bar text-blue-600 text-xl"></i>
+                </div>
+                <p class="text-gray-600 mb-4">View your quiz history and performance.</p>
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    View Results
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Settings</h3>
+                    <i class="fas fa-cog text-blue-600 text-xl"></i>
+                </div>
+                <p class="text-gray-600 mb-4">Update your profile and preferences.</p>
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Edit Profile
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
