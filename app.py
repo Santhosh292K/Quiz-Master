@@ -10,7 +10,7 @@ app.config['SECRET_KEY'] = 'your_secret_key_here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
-# User Model
+# Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -23,7 +23,20 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.email}>'
 
-# Quiz Model
+class Subject(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    chapters = db.relationship('Chapter', backref='subject', lazy=True, cascade="all, delete-orphan")
+
+class Chapter(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -151,10 +164,50 @@ def register():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    user = get_current_user()
-    if user.is_admin:
-        return redirect(url_for('admin_dashboard'))
-    return render_template('user_dashboard.html', user=user, active_page='dashboard')
+    subjects = Subject.query.order_by(Subject.created_at.desc()).all()
+    return render_template('admin_dashboard.html', active_page='home', subjects=subjects)
+
+@app.route('/subject/add', methods=['POST'])
+@login_required
+def add_subject():
+    name = request.form.get('name')
+    description = request.form.get('description')
+    
+    if not name:
+        flash('Subject name is required', 'error')
+        return redirect(url_for('dashboard'))
+    
+    new_subject = Subject(name=name, description=description)
+    db.session.add(new_subject)
+    db.session.commit()
+    flash('Subject added successfully!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/subject/<int:subject_id>/chapter/add', methods=['POST'])
+@login_required
+def add_chapter(subject_id):
+    subject = Subject.query.get_or_404(subject_id)
+    name = request.form.get('name')
+    description = request.form.get('description')
+    
+    if not name:
+        flash('Chapter name is required', 'error')
+        return redirect(url_for('dashboard'))
+    
+    new_chapter = Chapter(name=name, description=description, subject_id=subject_id)
+    db.session.add(new_chapter)
+    db.session.commit()
+    flash('Chapter added successfully!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/subject/<int:subject_id>/delete', methods=['POST'])
+@login_required
+def delete_subject(subject_id):
+    subject = Subject.query.get_or_404(subject_id)
+    db.session.delete(subject)
+    db.session.commit()
+    flash('Subject deleted successfully!', 'success')
+    return redirect(url_for('dashboard'))
 
 @app.route('/quiz')
 @login_required
@@ -168,16 +221,11 @@ def summary():
     quiz_results = Quiz.query.filter_by(user_id=user.id).order_by(Quiz.date_taken.desc()).all()
     return render_template('summary.html', active_page='summary', quiz_results=quiz_results)
 
-@app.route('/admin')
-@admin_required
-def admin_dashboard():
-    return render_template('admin_dashboard.html', active_page='dashboard')
-
-@app.route('/admin/users')
+@app.route('/users')
 @admin_required
 def users():
     all_users = User.query.filter(User.id != session['user_id']).all()
-    return render_template('admin_users_data.html', active_page='users', users=all_users)
+    return render_template('users.html', active_page='users', users=all_users)
 
 @app.route('/logout')
 def logout():
@@ -185,7 +233,6 @@ def logout():
     flash('Logged out successfully.', 'success')
     return redirect(url_for('login'))
 
-# User Profile Management
 @app.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -201,7 +248,6 @@ def edit_profile():
             flash('Error updating profile. Please try again.', 'error')
     return render_template('edit_profile.html', user=user)
 
-# Admin User Management
 @app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
 @admin_required
 def delete_user(user_id):
@@ -213,6 +259,10 @@ def delete_user(user_id):
     else:
         flash('Cannot delete admin user.', 'error')
     return redirect(url_for('users'))
+
+
+
+
 
 if __name__ == '__main__':
     with app.app_context():

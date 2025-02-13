@@ -1,93 +1,285 @@
-<!-- templates/user_dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Quiz Master</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Quiz Master Dashboard</title>
+    <link href="/static/admin_dashboard.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --background-color: #f5f7fa;
+            --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        main {
+            padding: 2rem;
+            background-color: var(--background-color);
+            min-height: calc(100vh - 60px);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 0 1rem;
+        }
+
+        .dashboard-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .subject-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            border: 1px solid #e1e8ed;
+            cursor: pointer;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .subject-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .subject-description {
+            color: #666;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .chapters-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .chapter-item {
+            background-color: #f8f9fa;
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .chapter-item:hover {
+            background-color: #edf2f7;
+        }
+
+        .chapter-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background-color: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--success-color);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .subject-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .start-quiz-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .start-quiz-btn:hover {
+            background-color: #357abd;
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <!-- Navigation -->
-    <nav class="bg-blue-600 text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-xl font-bold">Quiz Master</span>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm">Welcome, {{ user.full_name }}</span>
-                    <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-lg text-sm">Logout</a>
-                </div>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div style="font-size: 150%;color: white;font-weight: bold;">
+                Quiz Master
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
+                    Home
+                </a>
+                <a href="{{ url_for('quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
+                    Quiz
+                </a>
+                <a href="{{ url_for('summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
+                    Summary
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    Logout
+                </a>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <!-- Profile Section -->
-        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-800">Your Profile</h2>
-            </div>
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Full Name</p>
-                        <p class="text-lg font-medium">{{ user.full_name }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Email</p>
-                        <p class="text-lg font-medium">{{ user.email }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Qualification</p>
-                        <p class="text-lg font-medium">{{ user.qualification }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Date of Birth</p>
-                        <p class="text-lg font-medium">{{ user.dob.strftime('%B %d, %Y') }}</p>
-                    </div>
-                </div>
-            </div>
+    <main>
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Your Learning Journey</h1>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Take Quiz</h3>
-                    <i class="fas fa-book-open text-blue-600 text-xl"></i>
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card">
+                <div class="subject-header">
+                    <h3 class="subject-title">{{ subject.name }}</h3>
                 </div>
-                <p class="text-gray-600 mb-4">Start a new quiz and test your knowledge.</p>
-                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                
+                <p class="subject-description">{{ subject.description or 'No description available' }}</p>
+                
+                <div class="chapters-list">
+                    {% for chapter in subject.chapters %}
+                    <div class="chapter-item">
+                        <span>{{ chapter.name }}</span>
+                        <div class="chapter-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ chapter.progress }}%"></div>
+                            </div>
+                            <span class="progress-text">{{ chapter.progress }}%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="subject-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ subject.completed_chapters }}/{{ subject.total_chapters }}</div>
+                        <div class="stat-label">Chapters Complete</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ subject.average_score }}%</div>
+                        <div class="stat-label">Average Score</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ subject.time_spent }}</div>
+                        <div class="stat-label">Time Spent</div>
+                    </div>
+                </div>
+
+                <button class="start-quiz-btn" onclick="startQuiz({{ subject.id }})">
                     Start Quiz
                 </button>
             </div>
-
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800">My Results</h3>
-                    <i class="fas fa-chart-bar text-blue-600 text-xl"></i>
-                </div>
-                <p class="text-gray-600 mb-4">View your quiz history and performance.</p>
-                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                    View Results
-                </button>
+            {% else %}
+            <div class="empty-state">
+                <h3>No subjects available</h3>
+                <p>Please check back later for available subjects</p>
             </div>
-
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Settings</h3>
-                    <i class="fas fa-cog text-blue-600 text-xl"></i>
-                </div>
-                <p class="text-gray-600 mb-4">Update your profile and preferences.</p>
-                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                    Edit Profile
-                </button>
-            </div>
+            {% endfor %}
         </div>
-    </div>
+    </main>
+
+    <script>
+        function startQuiz(subjectId) {
+            window.location.href = `/quiz/${subjectId}`;
+        }
+
+        // Handle dynamic progress bar animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const progressBars = document.querySelectorAll('.progress-fill');
+            progressBars.forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 100);
+            });
+        });
+
+        // Add click event to subject cards
+        document.querySelectorAll('.subject-card').forEach(card => {
+            card.addEventListener('click', function(event) {
+                // Prevent triggering when clicking the start quiz button
+                if (!event.target.classList.contains('start-quiz-btn')) {
+                    const subjectId = this.dataset.subjectId;
+                    window.location.href = `/subject/${subjectId}/details`;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
