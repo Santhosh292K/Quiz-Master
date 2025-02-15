@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Master Dashboard</title>
+    <title>Admin Dashboard - Quiz Master</title>
     <link href="/static/admin_dashboard.css" rel="stylesheet">
     <style>
         :root {
@@ -251,27 +251,21 @@
     </style>
 </head>
 <body>
-    <!-- Keep the existing navbar -->
-<nav class="navbar">
+    <nav class="navbar">
         <div class="nav-container">
             <div style="font-size: 150%;color: white;font-weight: bold;">
-                Quiz Master
+                Quiz Master Admin
             </div>
             <div class="nav-links">
-                <a href="{{ url_for('dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
-                    Home
+                <a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
+                    Dashboard
                 </a>
-                <a href="{{ url_for('quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
+                <a href="{{ url_for('admin_quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
                     Quiz
                 </a>
-                <a href="{{ url_for('summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
-                    Summary
-                </a>
-                {% if is_admin %}
                 <a href="{{ url_for('users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
                     Users
                 </a>
-                {% endif %}
                 <a href="{{ url_for('logout') }}" class="logout-btn">
                     Logout
                 </a>
@@ -281,8 +275,7 @@
 
     <main>
         <div class="dashboard-header">
-            <h1 class="dashboard-title">Subjects</h1>
-            {% if is_admin %}
+            <h1 class="dashboard-title">Manage Subjects</h1>
             <button class="add-subject-btn" onclick="openSubjectModal()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -290,17 +283,15 @@
                 </svg>
                 Add New Subject
             </button>
-            {% endif %}
         </div>
 
         <div class="subjects-grid">
             {% for subject in subjects %}
-            <div class="subject-card {% if loop.first %}new-subject{% endif %}">
+            <div class="subject-card">
                 <div class="subject-header">
                     <h3 class="subject-title">{{ subject.name }}</h3>
-                    {% if is_admin %}
                     <div class="subject-actions">
-                        <button class="action-btn edit-btn" onclick="openEditSubjectModal({{ subject.id }})">
+                        <button class="action-btn edit-btn" onclick="openEditSubjectModal({{ subject.id }}, '{{ subject.name }}', '{{ subject.description }}')">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -315,7 +306,6 @@
                             </button>
                         </form>
                     </div>
-                    {% endif %}
                 </div>
                 
                 <p class="subject-description">{{ subject.description or 'No description available' }}</p>
@@ -324,9 +314,8 @@
                     {% for chapter in subject.chapters %}
                     <div class="chapter-item">
                         <span>{{ chapter.name }}</span>
-                        {% if is_admin %}
                         <div class="chapter-actions">
-                            <button class="action-btn edit-btn" onclick="openEditChapterModal({{ chapter.id }})">
+                            <button class="action-btn edit-btn" onclick="openEditChapterModal({{ chapter.id }}, '{{ chapter.name }}', '{{ chapter.description }}')">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -341,35 +330,27 @@
                                 </button>
                             </form>
                         </div>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
                 
-                {% if is_admin %}
                 <button class="add-chapter-btn" onclick="openChapterModal({{ subject.id }})">
                     + Add New Chapter
                 </button>
-                {% endif %}
             </div>
             {% else %}
             <div class="empty-state">
                 <h3>No subjects available</h3>
-                {% if is_admin %}
                 <p>Click the "Add New Subject" button to get started</p>
-                {% else %}
-                <p>No subjects have been added yet</p>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
 
-        {% if is_admin %}
-        <!-- Subject Modal -->
+        <!-- Add/Edit Subject Modal -->
         <div id="subjectModal" class="modal">
             <div class="modal-content">
-                <h2>Add New Subject</h2>
-                <form action="{{ url_for('add_subject') }}" method="POST">
+                <h2 id="subjectModalTitle">Add New Subject</h2>
+                <form id="subjectForm" action="{{ url_for('add_subject') }}" method="POST">
                     <div class="form-group">
                         <label for="name">Subject Name</label>
                         <input type="text" id="name" name="name" required>
@@ -380,16 +361,16 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeModal('subjectModal')">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add Subject</button>
+                        <button type="submit" class="btn btn-primary">Save Subject</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Chapter Modal -->
+        <!-- Add/Edit Chapter Modal -->
         <div id="chapterModal" class="modal">
             <div class="modal-content">
-                <h2>Add New Chapter</h2>
+                <h2 id="chapterModalTitle">Add New Chapter</h2>
                 <form id="chapterForm" action="" method="POST">
                     <div class="form-group">
                         <label for="chapterName">Chapter Name</label>
@@ -401,12 +382,11 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeModal('chapterModal')">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add Chapter</button>
+                        <button type="submit" class="btn btn-primary">Save Chapter</button>
                     </div>
                 </form>
             </div>
         </div>
-        {% endif %}
     </main>
 
     <script>
@@ -415,11 +395,45 @@
         }
 
         function openChapterModal(subjectId) {
-            const modal = document.getElementById('chapterModal');
-            const form = document.getElementById('chapterForm');
-            form.action = `/subject/${subjectId}/chapter/add`;
-            modal.style.display = 'flex';
+        const modal = document.getElementById('chapterModal');
+        const form = document.getElementById('chapterForm');
+        const title = document.getElementById('chapterModalTitle');
+        
+        // Reset the form
+        form.reset();
+        title.textContent = 'Add New Chapter';
+        // Fix the action URL with leading slash
+        form.action = `/admin/subject/${subjectId}/chapter/add`;
+        modal.style.display = 'flex';
+    }
+
+    function openEditChapterModal(id, name, description) {
+        const modal = document.getElementById('chapterModal');
+        const form = document.getElementById('chapterForm');
+        const title = document.getElementById('chapterModalTitle');
+        
+        title.textContent = 'Edit Chapter';
+        form.action = `/admin/chapter/${id}/edit`;
+        form.querySelector('#chapterName').value = name;
+        form.querySelector('#chapterDescription').value = description;
+        
+        modal.style.display = 'flex';
+    }
+
+    // Add form submission handling with validation and error feedback
+    document.getElementById('chapterForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        const nameInput = this.querySelector('#chapterName');
+        if (!nameInput.value.trim()) {
+            alert('Please enter a chapter name');
+            nameInput.focus();
+            return;
         }
+
+        // Submit the form
+        this.submit();
+    });
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
@@ -456,6 +470,20 @@
                 }
             });
         });
+        function openEditSubjectModal(id, name, description) {
+            const modal = document.getElementById('subjectModal');
+            const form = document.getElementById('subjectForm');
+            const title = document.getElementById('subjectModalTitle');
+            
+            title.textContent = 'Edit Subject';
+            form.action = `/admin/subject/${id}/edit`;
+            form.querySelector('#name').value = name;
+            form.querySelector('#description').value = description;
+            
+            modal.style.display = 'flex';
+        }
+        
+        
     </script>
 </body>
 </html>
