@@ -39,10 +39,53 @@ class Chapter(db.Model):
 
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    score = db.Column(db.Integer, nullable=False)
-    date_taken = db.Column(db.DateTime, default=datetime.utcnow)
+    quiz_id = db.Column(db.String(50), unique=True, nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id'), nullable=False)  # Add this line
+    date = db.Column(db.Date, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)  # in minutes
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    questions = db.relationship('Question', backref='quiz', lazy=True, cascade="all, delete-orphan")
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'quiz_id': self.quiz_id,
+            'subject_id': self.subject_id,
+            'chapter_id': self.chapter_id,
+            'date': self.date.isoformat(),
+            'duration': self.duration,
+            'questions': [question.to_dict() for question in self.questions]
+        }
+# Add the explanation field to the Question model
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    options = db.relationship('Option', backref='question', lazy=True, cascade="all, delete-orphan")
+    correct_option_index = db.Column(db.Integer, nullable=False)
+    explanation = db.Column(db.Text, nullable=False)  # New field for answer explanation
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'question_text': self.question_text,
+            'options': [option.to_dict() for option in self.options],
+            'correct_option_index': self.correct_option_index,
+            'explanation': self.explanation
+        }
 
+
+class Option(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
+    option_text = db.Column(db.Text, nullable=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'option_text': self.option_text
+        }
 # Helpers and Decorators
 def get_current_user():
     if 'user_id' in session:
@@ -383,16 +426,264 @@ def delete_user(user_id):
     return redirect(url_for('users'))
 
 
-@app.route('/admin/quiz/create', methods=['POST'])
+# Add these new routes to your Flask application
+
+@app.route('/admin/subjects', methods=['GET'])
+@admin_required
+def get_subjects():
+    try:
+        subjects = Subject.query.all()
+        return jsonify([{
+            'id': subject.id,
+            'name': subject.name
+        } for subject in subjects])
+    except Exception as e:
+        print(f"Error fetching subjects: {str(e)}")
+        return jsonify({'error': 'Failed to fetch subjects'}), 500
+
+@app.route('/admin/subjects/<int:subject_id>/chapters', methods=['GET'])
+@admin_required
+def get_chapters(subject_id):
+    try:
+        chapters = Chapter.query.filter_by(subject_id=subject_id).all()
+        return jsonify([{
+            'id': chapter.id,
+            'name': chapter.name
+        } for chapter in chapters])
+    except Exception as e:
+        print(f"Error fetching chapters: {str(e)}")
+        return jsonify({'error': 'Failed to fetch chapters'}), 500
+
+@app.route('/admin/quizzes', methods=['GET'])
+@admin_required
+def get_quizzes():
+    try:
+        quizzes = Quiz.query.order_by(Quiz.created_at.desc()).all()
+        return jsonify([{
+            'id': quiz.id,
+            'quiz_id': quiz.quiz_id,
+            'subject_id': quiz.subject_id,
+            'chapter_id': quiz.chapter_id,
+            'date': quiz.date.isoformat(),
+            'duration': quiz.duration,
+            'questions': [{
+                'question_text': question.question_text,
+                'options': [{
+                    'id': option.id,
+                    'option_text': option.option_text
+                } for option in question.options],
+                'correct_option_index': question.correct_option_index,
+                'explanation': question.explanation
+            } for question in quiz.questions]
+        } for quiz in quizzes]), 200
+    except Exception as e:
+        print(f"Error fetching quizzes: {str(e)}")
+        return jsonify({'error': 'Failed to fetch quizzes'}), 500
+
+@app.route('/admin/quizzes', methods=['POST'])
 @admin_required
 def create_quiz():
     try:
         data = request.get_json()
-        # Add your database logic here to save the quiz
-        return jsonify({'message': 'Quiz created successfully'}), 200
+        
+        # Create new quiz record
+        new_quiz = Quiz(
+            quiz_id=data['title'],  
+            subject_id=int(data['subject_id']),
+            chapter_id=int(data['chapter_id']),
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            duration=int(data['duration'])
+        )
+        db.session.add(new_quiz)
+        db.session.flush()
+        
+        # Create questions for the quiz
+        for q_data in data['questions']:
+            question = Question(
+                quiz_id=new_quiz.id,
+                question_text=q_data['question_text'],
+                correct_option_index=q_data['correct_option_index'],
+                explanation=q_data['explanation']
+            )
+            db.session.add(question)
+            db.session.flush()
+            
+            # Create options for each question
+            for option in q_data['options']:
+                opt = Option(
+                    question_id=question.id,
+                    option_text=option['option_text']
+                )
+                db.session.add(opt)
+        
+        db.session.commit()
+        return jsonify({'message': 'Quiz created successfully', 'quiz_id': new_quiz.id}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        db.session.rollback()
+        print(f"Error creating quiz: {str(e)}")
+        return jsonify({'error': 'Failed to create quiz'}), 500
+    
+@app.route('/admin/quiz/<int:quiz_id>', methods=['PUT'])
+@admin_required
+def update_quiz(quiz_id):
+    try:
+        data = request.get_json()
+        quiz = Quiz.query.get_or_404(quiz_id)
+        
+        # Update quiz details
+        quiz.quiz_id = data['title']  # Changed from quiz_id to title to match frontend
+        quiz.subject_id = int(data['subject_id'])
+        quiz.chapter_id = int(data['chapter_id'])
+        quiz.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        quiz.duration = int(data['duration'])
+        
+        # Delete existing questions and options
+        for question in quiz.questions:
+            db.session.delete(question)
+        
+        # Create new questions and options
+        for q_data in data['questions']:
+            question = Question(
+                quiz_id=quiz.id,
+                question_text=q_data['question_text'],
+                correct_option_index=q_data['correct_option_index'],
+                explanation=q_data['explanation']
+            )
+            db.session.add(question)
+            db.session.flush()
+            
+            # Fix: properly handle options structure
+            for option in q_data['options']:
+                opt = Option(
+                    question_id=question.id,
+                    option_text=option['option_text']
+                )
+                db.session.add(opt)
+        
+        db.session.commit()
+        return jsonify({'message': 'Quiz updated successfully', 'quiz': quiz.to_dict()}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating quiz: {str(e)}")
+        return jsonify({'error': 'Failed to update quiz'}), 500
+    
 
+@app.route('/admin/quiz/<int:quiz_id>', methods=['GET'])
+@admin_required
+def get_quiz(quiz_id):
+    try:
+        quiz = Quiz.query.get_or_404(quiz_id)
+        return jsonify(quiz.to_dict()), 200
+    except Exception as e:
+        print(f"Error fetching quiz: {str(e)}")
+        return jsonify({'error': 'Failed to fetch quiz'}), 500
+
+
+
+@app.route('/admin/quiz/<int:quiz_id>', methods=['DELETE'])
+@admin_required
+def delete_quiz(quiz_id):
+    try:
+        quiz = Quiz.query.get_or_404(quiz_id)
+        db.session.delete(quiz)
+        db.session.commit()
+        return jsonify({'message': 'Quiz deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting quiz: {str(e)}")
+        return jsonify({'error': 'Failed to delete quiz'}), 500
+
+@app.route('/admin/user/add', methods=['GET', 'POST'])
+@admin_required
+def add_user():
+    if request.method == 'POST':
+        try:
+            email = request.form.get('email')
+            password = request.form.get('password')
+            full_name = request.form.get('full_name')
+            qualification = request.form.get('qualification')
+            dob = request.form.get('dob')
+
+            if not validate_email(email):
+                flash('Invalid email format.', 'error')
+                return redirect(url_for('users'))
+
+            if User.query.filter_by(email=email).first():
+                flash('Email already registered.', 'error')
+                return redirect(url_for('users'))
+
+            dob_date = datetime.strptime(dob, '%Y-%m-%d').date()
+            hashed_password = generate_password_hash(password)
+            new_user = User(
+                email=email,
+                password=hashed_password,
+                full_name=full_name,
+                qualification=qualification,
+                dob=dob_date,
+                is_admin=False  # Regular user by default
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            flash('User added successfully!', 'success')
+            return redirect(url_for('users'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding user. Please try again.', 'error')
+            print(f"Error adding user: {str(e)}")
+            return redirect(url_for('users'))
+    return redirect(url_for('users'))
+
+@app.route('/admin/user/<int:user_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # Prevent editing admin users
+    if user.is_admin and user.id != session['user_id']:
+        flash('Cannot edit admin user.', 'error')
+        return redirect(url_for('users'))
+    
+    if request.method == 'POST':
+        try:
+            email = request.form.get('email')
+            full_name = request.form.get('full_name')
+            qualification = request.form.get('qualification')
+            dob = request.form.get('dob')
+            
+            # Validate email format
+            if not validate_email(email):
+                flash('Invalid email format.', 'error')
+                return redirect(url_for('edit_user', user_id=user_id))
+            
+            # Check if email is taken by another user
+            existing_user = User.query.filter(User.email == email, User.id != user_id).first()
+            if existing_user:
+                flash('Email already registered to another user.', 'error')
+                return redirect(url_for('edit_user', user_id=user_id))
+            
+            # Update user details
+            user.email = email
+            user.full_name = full_name
+            user.qualification = qualification
+            user.dob = datetime.strptime(dob, '%Y-%m-%d').date()
+            
+            # Update password if provided
+            password = request.form.get('password')
+            if password and password.strip():
+                user.password = generate_password_hash(password)
+            
+            db.session.commit()
+            flash('User updated successfully!', 'success')
+            return redirect(url_for('users'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating user: {str(e)}', 'error')
+            return redirect(url_for('edit_user', user_id=user_id))
+    
+    # GET request - display edit form
+    return render_template('edit_user.html', user=user, active_page='users')
 
 if __name__ == '__main__':
     with app.app_context():

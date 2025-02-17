@@ -3,192 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management - Quiz Master</title>
-    <link href="/static/admin_dashboard.css" rel="stylesheet">
+    <title>Quiz Management - Quiz Master</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/navbar.css" rel="stylesheet">
+
     <style>
-        .users-container {
+        .quiz-container {
+            max-width: 1200px;
+            margin: 2rem auto;
             padding: 2rem;
-        }
-        
-        .users-table {
-            width: 100%;
-            border-collapse: collapse;
             background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .users-table th,
-        .users-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .users-table th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
-        .users-table tr:hover {
-            background-color: #f5f7fa;
-        }
-        
-        .delete-user-btn {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        .delete-user-btn:hover {
-            background-color: #c0392b;
-        }
-        
-        .no-users {
-            text-align: center;
-            padding: 2rem;
-            color: #666;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* New styles for quiz section */
-        .quiz-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
         }
 
         .quiz-title {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: 600;
             color: #2c3e50;
-            margin-bottom: 1.5rem;
         }
 
         .select-group {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        .select-container {
-            flex: 1;
-        }
-
-        .select-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #4a5568;
-        }
-
-        select {
+        .form-control {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            background-color: white;
-            font-size: 1rem;
-            color: #2d3748;
-            cursor: pointer;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: #4a90e2;
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-        }
-
-        select:disabled {
-            background-color: #f7fafc;
-            cursor: not-allowed;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-        }
-
-        .modal-content {
-            position: relative;
-            background-color: white;
-            margin: 2% auto;
-            padding: 20px;
-            width: 80%;
-            max-width: 800px;
+            border: 2px solid #e2e8f0;
             border-radius: 8px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .close {
-            position: absolute;
-            right: 20px;
-            top: 10px;
-            font-size: 28px;
-            cursor: pointer;
-            color: #666;
-        }
-
-        /* Form styles */
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #4a5568;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
             font-size: 1rem;
+            transition: all 0.3s ease;
         }
 
-        /* Question styles */
-        .question-container {
-            border: 1px solid #e2e8f0;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 6px;
-            background-color: #f8fafc;
+        .form-control:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            outline: none;
         }
 
-        .options-container {
-            margin-left: 1.5rem;
+        .form-control.error {
+            border-color: #dc3545;
         }
 
-        .option-item {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 0.5rem;
-            align-items: center;
-        }
-
-        /* Button styles */
         .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .btn-primary {
@@ -196,39 +76,158 @@
             color: white;
         }
 
-        .btn-danger {
-            background-color: #e74c3c;
-            color: white;
+        .btn-primary:hover {
+            background-color: #357abd;
         }
 
         .btn-secondary {
-            background-color: #95a5a6;
+            background-color: #6c757d;
             color: white;
         }
 
-        /* Quiz list styles */
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
         .quiz-list {
-            margin-top: 2rem;
+            display: grid;
+            gap: 1.5rem;
         }
 
-        .quiz-item {
-            background-color: white;
-            padding: 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
+        .quiz-card {
+            background: white;
+            border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: transform 0.2s ease;
         }
 
-        .quiz-header {
+        .quiz-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .quiz-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .quiz-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .quiz-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .step {
+            padding: 0.5rem 1.5rem;
+            margin: 0 1rem;
+            background: #e2e8f0;
+            border-radius: 20px;
+            color: #4a5568;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: #4a90e2;
+            color: white;
+        }
+
+        .question-container {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .question-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
         }
 
-        .quiz-details {
-            color: #666;
-            font-size: 0.9rem;
+        .option-container {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .explanation-field {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -254,203 +253,461 @@
             </div>
         </div>
     </nav>
+    <div class="quiz-container">
+        <div class="quiz-header">
+            <h2 class="quiz-title">Quiz Management</h2>
+            <button id="createQuizBtn" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create New Quiz
+            </button>
+        </div>
 
-    <main class="users-container">
-        <div class="quiz-container">
-            <div class="quiz-title">
-                Create Quiz
-            </div>
-            <div class="select-group">
-                <div class="select-container">
-                    <label class="select-label" for="subject-select">Select Subject</label>
-                    <select id="subject-select" onchange="handleSubjectChange()">
-                        <option value="">Please select a subject</option>
-                        {% for subject in subjects %}
-                        <option value="{{ subject.id }}">{{ subject.name }}</option>
-                        {% endfor %}
-                    </select>
+        <div id="quizModal" class="modal">
+            <div class="modal-content">
+                <div class="step-indicator">
+                    <div class="step active" id="stepDetails">1. Quiz Details</div>
+                    <div class="step" id="stepQuestions">2. Questions</div>
                 </div>
-                <div class="select-container">
-                    <label class="select-label" for="chapter-select">Select Chapter</label>
-                    <select id="chapter-select" disabled>
-                        <option value="">Please select a subject first</option>
-                    </select>
-                </div>
-                <button id="createQuizBtn" class="btn btn-primary" style="margin-bottom: 2rem;">Create Quiz</button>
 
+                <form id="quizForm" class="quiz-form">
+                    <div id="quizDetailsSection">
+                        <h3 class="section-title">Quiz Details</h3>
+                        <div class="form-group">
+                            <label class="form-label" for="quizTitle">Quiz Title</label>
+                            <input type="text" id="quizTitle" class="form-control" required>
+                        </div>
+
+                        <div class="select-group">
+                            <div class="form-group">
+                                <label class="form-label" for="subject-select">Subject</label>
+                                <select id="subject-select" class="form-control" required>
+                                    <option value="">Select a subject</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="chapter-select">Chapter</label>
+                                <select id="chapter-select" class="form-control" required disabled>
+                                    <option value="">Select a subject first</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="select-group">
+                            <div class="form-group">
+                                <label class="form-label" for="quizDate">Schedule Date</label>
+                                <input type="date" id="quizDate" class="form-control" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="quizDuration">Duration (minutes)</label>
+                                <input type="number" id="quizDuration" class="form-control" min="1" required>
+                            </div>
+                        </div>
+
+                        <button type="button" id="nextBtn" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Next: Add Questions
+                        </button>
+                    </div>
+
+                    <div id="questionsSection" class="hidden">
+                        <h3 class="section-title">Quiz Questions</h3>
+                        <div id="questionsContainer"></div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="addQuestion()">
+                                <i class="fas fa-plus"></i> Add Question
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="showQuizDetails()">
+                                <i class="fas fa-arrow-left"></i> Back to Details
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Quiz
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
-        <div class="quiz-list">
-            <h3>Created Quizzes</h3>
-            <div id="quizListContainer"></div>
-        </div>
-    </main>
-    <div id="quizModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Create New Quiz</h2>
-            <form id="quizForm">
-                <div class="form-group">
-                    <label for="quizId">Quiz ID</label>
-                    <input type="text" id="quizId" required>
-                </div>
-                <div class="form-group">
-                    <label for="quizDate">Date</label>
-                    <input type="date" id="quizDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="quizDuration">Duration (minutes)</label>
-                    <input type="number" id="quizDuration" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="questionCount">Number of Questions</label>
-                    <input type="number" id="questionCount" min="1" max="50" required>
-                </div>
-                <div class="form-group">
-                    <label for="optionCount">Options per Question</label>
-                    <input type="number" id="optionCount" min="2" max="6" required>
-                </div>
-                
-                <div id="questionsContainer"></div>
-                
-                <button type="button" class="btn btn-primary" onclick="generateQuestions()">Generate Questions</button>
-                <button type="submit" class="btn btn-primary" style="margin-left: 1rem;">Save Quiz</button>
-            </form>
-        </div>
+
+        <div id="quizList" class="quiz-list"></div>
     </div>
 
     <script>
-        const modal = document.getElementById('quizModal');
-        const createBtn = document.getElementById('createQuizBtn');
-        const closeBtn = document.getElementsByClassName('close')[0];
-        
-        createBtn.onclick = () => modal.style.display = 'block';
-        closeBtn.onclick = () => modal.style.display = 'none';
-        window.onclick = (event) => {
-            if (event.target == modal) modal.style.display = 'none';
+        let editingQuizId = null;
+
+        function showQuizDetails() {
+            document.getElementById('quizDetailsSection').classList.remove('hidden');
+            document.getElementById('questionsSection').classList.add('hidden');
+            document.getElementById('stepDetails').classList.add('active');
+            document.getElementById('stepQuestions').classList.remove('active');
         }
 
-        // Generate question fields
-        function generateQuestions() {
-            const container = document.getElementById('questionsContainer');
-            const questionCount = parseInt(document.getElementById('questionCount').value);
-            const optionCount = parseInt(document.getElementById('optionCount').value);
+        function showQuestions() {
+            const form = document.getElementById('quizForm');
+            const detailsInputs = document.getElementById('quizDetailsSection').querySelectorAll('input, select');
+            let isValid = true;
             
-            container.innerHTML = '';
-            
-            for (let i = 1; i <= questionCount; i++) {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'question-container';
-                questionDiv.innerHTML = `
-                    <div class="form-group">
-                        <label>Question ${i}</label>
-                        <input type="text" class="question-input" required>
-                    </div>
-                    <div class="options-container">
-                        ${Array(optionCount).fill(0).map((_, j) => `
-                            <div class="option-item">
-                                <input type="radio" name="correct_${i}" value="${j}" required>
-                                <input type="text" class="option-input" placeholder="Option ${j + 1}" required>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                container.appendChild(questionDiv);
-            }
-        }
+            detailsInputs.forEach(input => {
+                if (!input.value) {
+                    isValid = false;
+                    input.classList.add('error');
+                } else {
+                    input.classList.remove('error');
+                }
+            });
 
-        // Handle form submission
-        document.getElementById('quizForm').onsubmit = (e) => {
-            e.preventDefault();
-            
-            const quiz = {
-                id: document.getElementById('quizId').value,
-                date: document.getElementById('quizDate').value,
-                duration: document.getElementById('quizDuration').value,
-                questions: Array.from(document.getElementsByClassName('question-container')).map((container, i) => {
-                    return {
-                        id: i + 1,
-                        question: container.querySelector('.question-input').value,
-                        options: Array.from(container.getElementsByClassName('option-input')).map(input => input.value),
-                        correctOption: Array.from(container.querySelectorAll(`input[name="correct_${i + 1}"]`))
-                            .findIndex(radio => radio.checked)
-                    };
-                })
-            };
-            
-            // Save quiz to localStorage for demonstration
-            const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-            quizzes.push(quiz);
-            localStorage.setItem('quizzes', JSON.stringify(quizzes));
-            
-            updateQuizList();
-            modal.style.display = 'none';
-            e.target.reset();
-        };
-
-        // Update quiz list
-        function updateQuizList() {
-            const container = document.getElementById('quizListContainer');
-            const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-            
-            container.innerHTML = quizzes.map(quiz => `
-                <div class="quiz-item">
-                    <div class="quiz-header">
-                        <h4>Quiz ${quiz.id}</h4>
-                        <button class="btn btn-danger" onclick="deleteQuiz('${quiz.id}')">Delete</button>
-                    </div>
-                    <div class="quiz-details">
-                        <p>Date: ${quiz.date}</p>
-                        <p>Duration: ${quiz.duration} minutes</p>
-                        <p>Questions: ${quiz.questions.length}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Delete quiz
-        function deleteQuiz(quizId) {
-            const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-            localStorage.setItem('quizzes', JSON.stringify(quizzes.filter(q => q.id !== quizId)));
-            updateQuizList();
-        }
-
-        // Initialize quiz list
-        updateQuizList();
-        function handleSubjectChange() {
-            const subjectSelect = document.getElementById('subject-select');
-            const chapterSelect = document.getElementById('chapter-select');
-            
-            // Reset and disable chapter select if no subject is selected
-            if (!subjectSelect.value) {
-                chapterSelect.innerHTML = '<option value="">Please select a subject first</option>';
-                chapterSelect.disabled = true;
+            if (!isValid) {
+                alert('Please fill in all quiz details before proceeding');
                 return;
             }
 
-            // Enable chapter select and load chapters for selected subject
-            chapterSelect.disabled = false;
-            
-            // Fetch chapters for selected subject
-            fetch(`/admin/subject/${subjectSelect.value}/chapters`)
-                .then(response => response.json())
-                .then(chapters => {
-                    // Clear existing options
-                    chapterSelect.innerHTML = '<option value="">Select a chapter</option>';
-                    
-                    // Add new chapter options
-                    chapters.forEach(chapter => {
-                        const option = document.createElement('option');
-                        option.value = chapter.id;
-                        option.textContent = chapter.name;
-                        chapterSelect.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching chapters:', error);
-                    chapterSelect.innerHTML = '<option value="">Error loading chapters</option>';
-                });
+            document.getElementById('quizDetailsSection').classList.add('hidden');
+            document.getElementById('questionsSection').classList.remove('hidden');
+            document.getElementById('stepDetails').classList.remove('active');
+            document.getElementById('stepQuestions').classList.add('active');
+
+            if (document.getElementById('questionsContainer').children.length === 0) {
+                addQuestion();
+            }
         }
+
+        function addQuestion(questionData = null) {
+            const container = document.getElementById('questionsContainer');
+            const questionIndex = container.children.length + 1;
+            
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-container';
+            
+            questionDiv.innerHTML = `
+                <div class="question-header">
+                    <h4>Question ${questionIndex}</h4>
+                    <button type="button" class="btn btn-danger" onclick="this.closest('.question-container').remove()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Question Text</label>
+                    <input type="text" class="form-control question-text" value="${questionData ? questionData.question_text : ''}" required>
+                </div>
+                
+                <div class="options-container">
+                    ${Array(4).fill(0).map((_, i) => `
+                        <div class="option-container">
+                            <div class="form-group">
+                                <label class="form-label">Option ${i + 1}</label>
+                                <input type="text" class="form-control option-text" value="${questionData?.options[i]?.option_text || ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="radio" name="correct_${questionIndex}" value="${i}" ${questionData?.correct_option_index === i ? 'checked' : ''} required>
+                                <label>Correct Answer</label>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="form-group explanation-field">
+                    <label class="form-label">Explanation for Correct Answer</label>
+                    <textarea class="form-control answer-explanation" rows="3" required>${questionData?.explanation || ''}</textarea>
+                </div>
+            `;
+            
+            container.appendChild(questionDiv);
+        }
+
+        async function loadQuizzes() {
+            try {
+                const response = await fetch('/admin/quizzes');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const quizzes = await response.json();
+                
+                const quizList = document.getElementById('quizList');
+                quizList.innerHTML = '';
+                
+                if (quizzes.length === 0) {
+                    quizList.innerHTML = '<div class="text-center p-4">No quizzes found</div>';
+                    return;
+                }
+                
+                quizzes.forEach(quiz => {
+                    const quizCard = document.createElement('div');
+                    quizCard.className = 'quiz-card';
+                    quizCard.innerHTML = `
+                        <div class="quiz-card-header">
+                            <h3>${quiz.quiz_id || 'Untitled Quiz'}</h3>
+                            <div class="quiz-actions">
+                                <button class="btn btn-secondary" onclick="editQuiz(${quiz.id})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                        <div class="quiz-info">
+                            <div>
+                                <strong>Date:</strong> ${new Date(quiz.date).toLocaleDateString()}
+                            </div>
+                            <div>
+                                <strong>Duration:</strong> ${quiz.duration} minutes
+                            </div>
+                            <div>
+                                <strong>Questions:</strong> ${quiz.questions.length}
+                            </div>
+                        </div>
+                    `;
+                    quizList.appendChild(quizCard);
+                });
+            } catch (error) {
+                console.error('Error loading quizzes:', error);
+                document.getElementById('quizList').innerHTML = 
+                    '<div class="text-center p-4 text-red-600">Failed to load quizzes. Please try again.</div>';
+            }
+        }
+
+        async function loadSubjects() {
+            try {
+                const response = await fetch('/admin/subjects');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const subjects = await response.json();
+                
+                const subjectSelect = document.getElementById('subject-select');
+                subjectSelect.innerHTML = `
+                    <option value="">Select a subject</option>
+                    ${subjects.map(subject => 
+                        `<option value="${subject.id}">${subject.name}</option>`
+                    ).join('')}
+                `;
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+                alert('Failed to load subjects. Please try again.');
+            }
+        }
+
+        async function loadChapters(subjectId) {
+            const chapterSelect = document.getElementById('chapter-select');
+            chapterSelect.disabled = !subjectId;
+            
+            if (!subjectId) {
+                chapterSelect.innerHTML = '<option value="">Select a subject first</option>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/subjects/${subjectId}/chapters`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const chapters = await response.json();
+                
+                chapterSelect.innerHTML = `
+                    <option value="">Select a chapter</option>
+                    ${chapters.map(chapter => 
+                        `<option value="${chapter.id}">${chapter.name}</option>`
+                    ).join('')}
+                `;
+                chapterSelect.disabled = false;
+            } catch (error) {
+                console.error('Error loading chapters:', error);
+                alert('Failed to load chapters. Please try again.');
+            }
+        }
+
+        async function editQuiz(quizId) {
+            try {
+                const response = await fetch(`/admin/quiz/${quizId}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const quiz = await response.json();
+                
+                editingQuizId = quizId;
+                document.getElementById('quizTitle').value = quiz.quiz_id;  // This matches the backend's response
+                document.getElementById('subject-select').value = quiz.subject_id;
+                await loadChapters(quiz.subject_id);
+                document.getElementById('chapter-select').value = quiz.chapter_id;
+                document.getElementById('quizDate').value = quiz.date;
+                document.getElementById('quizDuration').value = quiz.duration;
+                
+                const questionsContainer = document.getElementById('questionsContainer');
+                questionsContainer.innerHTML = '';
+                quiz.questions.forEach(question => addQuestion(question));
+                
+                openModal();
+            } catch (error) {
+                console.error('Error loading quiz for editing:', error);
+                alert('Failed to load quiz for editing. Please try again.');
+            }
+        }
+
+        async function deleteQuiz(quizId) {
+            if (!confirm('Are you sure you want to delete this quiz?')) return;
+            
+            try {
+                const response = await fetch(`/admin/quiz/${quizId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                loadQuizzes();
+                alert('Quiz deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting quiz:', error);
+                alert('Failed to delete quiz. Please try again.');
+            }
+        }
+
+        function collectQuizData() {
+            const formData = {
+                title: document.getElementById('quizTitle').value.trim(),
+                subject_id: document.getElementById('subject-select').value,
+                chapter_id: document.getElementById('chapter-select').value,
+                date: document.getElementById('quizDate').value,
+                duration: parseInt(document.getElementById('quizDuration').value),
+                questions: []
+            };
+
+            // Validate required fields
+            if (!formData.title || !formData.subject_id || !formData.chapter_id || !formData.date || !formData.duration) {
+                throw new Error('Please fill in all required quiz details');
+            }
+
+            const questionContainers = document.querySelectorAll('.question-container');
+            
+            if (questionContainers.length === 0) {
+                throw new Error('Please add at least one question');
+            }
+
+            questionContainers.forEach((container, index) => {
+                const questionText = container.querySelector('.question-text').value.trim();
+                const optionInputs = container.querySelectorAll('.option-text');
+                const correctOption = container.querySelector(`input[name="correct_${index + 1}"]:checked`);
+                const explanation = container.querySelector('.answer-explanation').value.trim();
+
+                // Validate question data
+                if (!questionText) {
+                    throw new Error(`Please enter the question text for question ${index + 1}`);
+                }
+
+                const options = [];
+                optionInputs.forEach((input, i) => {
+                    const optionText = input.value.trim();
+                    if (!optionText) {
+                        throw new Error(`Please enter text for option ${i + 1} in question ${index + 1}`);
+                    }
+                    options.push({ option_text: optionText });
+                });
+
+                if (!correctOption) {
+                    throw new Error(`Please select the correct answer for question ${index + 1}`);
+                }
+
+                if (!explanation) {
+                    throw new Error(`Please provide an explanation for question ${index + 1}`);
+                }
+
+                formData.questions.push({
+                    question_text: questionText,
+                    options: options,
+                    correct_option_index: parseInt(correctOption.value),
+                    explanation: explanation
+                });
+            });
+
+            return formData;
+        }
+
+        async function saveQuiz(formData) {
+            try {
+                const url = editingQuizId ? 
+                    `/admin/quiz/${editingQuizId}` : 
+                    '/admin/quizzes';
+                
+                const method = editingQuizId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.message) {
+                    // Clear the form
+                    document.getElementById('quizForm').reset();
+                    document.getElementById('questionsContainer').innerHTML = '';
+                    
+                    // Close the modal
+                    closeModal();
+                    
+                    // Refresh the quiz list
+                    await loadQuizzes();
+                    
+                    // Show success message
+                    alert(editingQuizId ? 'Quiz updated successfully!' : 'Quiz created successfully!');
+                }
+            } catch (error) {
+                console.error('Error saving quiz:', error);
+                alert('Failed to save quiz: ' + error.message);
+            }
+        }
+
+        function openModal() {
+            document.getElementById('quizModal').style.display = 'block';
+            showQuizDetails();
+        }
+
+        function closeModal() {
+            document.getElementById('quizModal').style.display = 'none';
+            document.getElementById('quizForm').reset();
+            document.getElementById('questionsContainer').innerHTML = '';
+            editingQuizId = null;
+        }
+
+        // Event Listeners - SINGLE PLACE FOR ALL EVENT LISTENERS
+        document.addEventListener('DOMContentLoaded', () => {
+            loadQuizzes();
+            loadSubjects();
+            
+            document.getElementById('createQuizBtn').addEventListener('click', () => {
+                editingQuizId = null;
+                document.getElementById('quizForm').reset();
+                document.getElementById('questionsContainer').innerHTML = '';
+                openModal();
+            });
+            
+            document.getElementById('subject-select').addEventListener('change', (e) => {
+                loadChapters(e.target.value);
+            });
+            
+            document.getElementById('nextBtn').addEventListener('click', showQuestions);
+            
+            document.getElementById('quizForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try {
+                    const formData = collectQuizData();
+                    await saveQuiz(formData);
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === document.getElementById('quizModal')) {
+                    if (confirm('Are you sure you want to discard your changes?')) {
+                        closeModal();
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>
