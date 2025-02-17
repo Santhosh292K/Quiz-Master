@@ -4,6 +4,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import re
 from datetime import datetime
+from datetime import datetime, timedelta  # Add this import at the top
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
@@ -213,13 +215,13 @@ def dashboard():
 @admin_required
 def admin_dashboard():
     subjects = Subject.query.order_by(Subject.created_at.desc()).all()
-    return render_template('admin_dashboard.html', active_page='home', subjects=subjects)
+    return render_template('admin/admin_dashboard.html', active_page='home', subjects=subjects)
 
 @app.route('/user/dashboard')
 @login_required
 def user_dashboard():
     subjects = Subject.query.order_by(Subject.created_at.desc()).all()
-    return render_template('user_dashboard.html', active_page='home', subjects=subjects)
+    return render_template('user/user_dashboard.html', active_page='home', subjects=subjects)
 
 # Admin Subject Management Routes
 @app.route('/admin/subject/add', methods=['GET', 'POST'])
@@ -365,7 +367,7 @@ def get_subject_chapters(subject_id):
 @login_required
 def admin_quiz():
     subjects = Subject.query.all()
-    return render_template('admin_quiz.html', active_page='quiz', subjects=subjects)
+    return render_template('admin/admin_quiz.html', active_page='quiz', subjects=subjects)
 
 @app.route('/summary')
 @login_required
@@ -379,7 +381,7 @@ def summary():
 def users():
     try:
         all_users = User.query.filter(User.id != session['user_id']).all()
-        return render_template('users.html', active_page='users', users=all_users)
+        return render_template('admin/users.html', active_page='users', users=all_users)
     except Exception as e:
         flash('Error loading users. Please try again.', 'error')
         return redirect(url_for('admin_dashboard'))
@@ -683,7 +685,112 @@ def edit_user(user_id):
             return redirect(url_for('edit_user', user_id=user_id))
     
     # GET request - display edit form
-    return render_template('edit_user.html', user=user, active_page='users')
+    return render_template('admin/edit_user.html', user=user, active_page='users')
+
+@app.route('/admin/summary')
+@admin_required
+def admin_summary():
+    # Count statistics
+    total_subjects = Subject.query.count()
+    total_chapters = Chapter.query.count()
+    total_quizzes = Quiz.query.count()
+    total_users = User.query.filter(User.is_admin == False).count()
+    total_questions = Question.query.count()
+    
+    # Subject-wise chapter count
+    subjects = Subject.query.all()
+    subject_data = []
+    for subject in subjects:
+        chapter_count = Chapter.query.filter_by(subject_id=subject.id).count()
+        quiz_count = Quiz.query.filter_by(subject_id=subject.id).count()
+        subject_data.append({
+            'id': subject.id,
+            'name': subject.name,
+            'chapter_count': chapter_count,
+            'quiz_count': quiz_count
+        })
+    
+    # Monthly quiz creation data (for the past year)
+    quiz_monthly_data = []
+    current_date = datetime.utcnow()
+    for i in range(12):
+        month_date = current_date - timedelta(days=30 * i)
+        month_start = datetime(month_date.year, month_date.month, 1)
+        if month_date.month == 12:
+            next_month = datetime(month_date.year + 1, 1, 1)
+        else:
+            next_month = datetime(month_date.year, month_date.month + 1, 1)
+        month_quiz_count = Quiz.query.filter(
+            Quiz.created_at >= month_start,
+            Quiz.created_at < next_month
+        ).count()
+        quiz_monthly_data.append({
+            'month': month_start.strftime('%b %Y'),
+            'count': month_quiz_count
+        })
+    quiz_monthly_data.reverse()
+    
+    # Chapters by subject (for pie chart)
+    chapters_by_subject = []
+    for subject in subjects:
+        count = Chapter.query.filter_by(subject_id=subject.id).count()
+        if count > 0:
+            chapters_by_subject.append({
+                'name': subject.name,
+                'count': count
+            })
+    
+    # Most active chapters (most quizzes)
+    active_chapters_query = db.session.query(
+        Chapter.id, 
+        Chapter.name, 
+        Subject.name.label('subject_name'),
+        db.func.count(Quiz.id).label('quiz_count')
+    ).join(Quiz, Quiz.chapter_id == Chapter.id
+    ).join(Subject, Subject.id == Chapter.subject_id
+    ).group_by(Chapter.id
+    ).order_by(db.func.count(Quiz.id).desc()
+    ).limit(5).all()
+    
+    active_chapters = [{
+        'name': chapter.name,
+        'subject_name': chapter.subject_name,
+        'quiz_count': chapter.quiz_count
+    } for chapter in active_chapters_query]
+    
+    # Question count distribution
+    subquery = db.session.query(
+        Quiz.id,
+        db.func.count(Question.id).label('questions_per_quiz')
+    ).join(Question
+    ).group_by(Quiz.id
+    ).subquery()
+
+    quiz_question_distribution = db.session.query(
+        subquery.c.questions_per_quiz.label('question_count'),
+        db.func.count(subquery.c.id).label('quiz_count')
+    ).group_by(subquery.c.questions_per_quiz
+    ).order_by(subquery.c.questions_per_quiz
+    ).limit(10).all()
+
+    quiz_question_data = [{
+        'question_count': item.question_count,
+        'quiz_count': item.quiz_count
+    } for item in quiz_question_distribution]
+    
+    return render_template(
+        'admin/summary.html',
+        total_subjects=total_subjects,
+        total_chapters=total_chapters,
+        total_quizzes=total_quizzes,
+        total_users=total_users,
+        total_questions=total_questions,
+        subject_data=subject_data,
+        quiz_monthly_data=quiz_monthly_data,
+        chapters_by_subject=chapters_by_subject,
+        active_chapters=active_chapters,
+        quiz_question_data=quiz_question_data
+    )
 
 if __name__ == '__main__':
     with app.app_context():

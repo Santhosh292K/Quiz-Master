@@ -6,7 +6,6 @@
     <title>Quiz Management - Quiz Master</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/static/navbar.css" rel="stylesheet">
-
     <style>
         .quiz-container {
             max-width: 1200px;
@@ -246,6 +245,9 @@
                 </a>
                 <a href="{{ url_for('users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
                     Users
+                </a>
+                <a href="{{ url_for('admin_summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
+                    Summary
                 </a>
                 <a href="{{ url_for('logout') }}" class="logout-btn">
                     Logout
