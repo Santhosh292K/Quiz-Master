@@ -1,0 +1,237 @@
+body {
+    background: #f8f9ff;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #1a1f36;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+}
+
+main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: #f8f9ff;
+}
+
+/* Advanced Dashboard Header */
+.dashboard-header {
+    margin-bottom: 3rem;
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #3a0ca3 0%, #7209b7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+}
+
+.dashboard-subtitle {
+    color: #4f546b;
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin-top: 1rem;
+}
+
+/* Enhanced Subjects Grid */
+.subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 2.5rem;
+    perspective: 1000px;
+}
+
+/* Premium Subject Card Design */
+.subject-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 
+        0 4px 6px -1px rgba(58, 12, 163, 0.05),
+        0 2px 4px -1px rgba(58, 12, 163, 0.03);
+    padding: 2rem;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    border: 1px solid rgba(114, 9, 183, 0.08);
+}
+
+.subject-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(135deg, #3a0ca3 0%, #7209b7 100%);
+    border-radius: 20px 20px 0 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.subject-card:hover {
+    transform: translateY(-8px) rotateX(2deg);
+    box-shadow: 
+        0 20px 25px -5px rgba(58, 12, 163, 0.1),
+        0 10px 10px -5px rgba(58, 12, 163, 0.04);
+}
+
+.subject-card:hover::before {
+    opacity: 1;
+}
+
+/* Enhanced Subject Header */
+.subject-header {
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.subject-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2d1f3f;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.subject-title::before {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    background: #7209b7;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.subject-description {
+    color: #4f546b;
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+}
+
+/* Advanced Chapters List */
+.chapters-list {
+    background: #f8f9ff;
+    border-radius: 16px;
+    padding: 0.75rem;
+    position: relative;
+}
+
+.chapter-item {
+    padding: 1.25rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.chapter-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: linear-gradient(135deg, #3a0ca3 0%, #7209b7 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 4px;
+}
+
+.chapter-item:hover {
+    background: white;
+    box-shadow: 0 4px 12px rgba(58, 12, 163, 0.05);
+    transform: translateX(4px);
+}
+
+.chapter-item:hover::before {
+    opacity: 1;
+}
+
+.chapter-item span {
+    color: #2d1f3f;
+    font-weight: 500;
+    font-size: 1rem;
+    flex: 1;
+}
+
+/* Enhanced Empty State */
+.empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: white;
+    border-radius: 20px;
+    grid-column: 1 / -1;
+    position: relative;
+    overflow: hidden;
+    border: 2px dashed rgba(114, 9, 183, 0.2);
+}
+
+.empty-state::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(58, 12, 163, 0.03) 0%, rgba(114, 9, 183, 0.03) 100%);
+    z-index: 0;
+}
+
+.empty-state > * {
+    position: relative;
+    z-index: 1;
+}
+
+.empty-state h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d1f3f;
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    color: #4f546b;
+    font-size: 1.1rem;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+
+/* Responsive Enhancements */
+@media (max-width: 1024px) {
+    .subjects-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    main {
+        padding: 1.5rem;
+    }
+
+    .dashboard-title {
+        font-size: 2rem;
+    }
+
+    .subjects-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .subject-card {
+        padding: 1.5rem;
+    }
+}

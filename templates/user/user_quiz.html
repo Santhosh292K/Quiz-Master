@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Quizzes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="/static/navbar.css" rel="stylesheet">
+    <link href="/static/quiz_listing.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div style="font-size: 150%;color: white;font-weight: bold;">
+                Quiz Master
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('user_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
+                    Dashboard
+                </a>
+                
+                <a href="{{ url_for('user_quiz') }}" {% if active_page == 'user_quiz' %}class="active"{% endif %}>
+                    Quiz
+                </a>
+                
+                <a href="#" {% if active_page == '' %}class="active"{% endif %}>
+                    Summary
+                </a>
+
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        {{ current_user.full_name[:1].upper() }}
+                    </div>
+                    <span class="user-name">{{ current_user.full_name }}</span>
+                    <span class="dropdown-arrow"></span>
+                    <div class="profile-dropdown">
+                        <a href="#">
+                            Profile Settings
+                        </a>
+                        <a href="{{ url_for('logout') }}">
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">Available Quizzes</h1>
+            <div>
+                <span class="badge bg-success me-2">Open</span>
+                <span class="badge bg-secondary me-2">Closed</span>
+                <span id="totalQuizCount" class="badge bg-primary">0 Quizzes</span>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <label for="subjectFilter" class="form-label">Filter by Subject</label>
+                    <select id="subjectFilter" class="form-select">
+                        <option value="all">All Subjects</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}">{{ subject.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <label for="chapterFilter" class="form-label">Filter by Chapter</label>
+                    <select id="chapterFilter" class="form-select" disabled>
+                        <option value="all">All Chapters</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="statusFilter" class="form-label">Filter by Status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="all">All Quizzes</option>
+                        <option value="open">Open Quizzes</option>
+                        <option value="closed">Closed Quizzes</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-pills mb-3" id="quizTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#all-quizzes" type="button" role="tab" aria-controls="all-quizzes" aria-selected="true">All Quizzes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="open-tab" data-bs-toggle="pill" data-bs-target="#open-quizzes" type="button" role="tab" aria-controls="open-quizzes" aria-selected="false">Open Quizzes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="closed-tab" data-bs-toggle="pill" data-bs-target="#closed-quizzes" type="button" role="tab" aria-controls="closed-quizzes" aria-selected="false">Closed Quizzes</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="quizTabContent">
+            <!-- All Quizzes Tab -->
+            <div class="tab-pane fade show active" id="all-quizzes" role="tabpanel" aria-labelledby="all-tab">
+                <div id="allQuizzesContainer" class="row">
+                    <!-- Quiz cards will be dynamically added here -->
+                </div>
+                <div id="allQuizzesEmpty" class="empty-state d-none">
+                    <i class="fas fa-search"></i>
+                    <h4>No quizzes found</h4>
+                    <p class="text-muted">Try changing your filter criteria or check back later</p>
+                </div>
+            </div>
+
+            <!-- Open Quizzes Tab -->
+            <div class="tab-pane fade" id="open-quizzes" role="tabpanel" aria-labelledby="open-tab">
+                <div id="openQuizzesContainer" class="row">
+                    <!-- Open quiz cards will be dynamically added here -->
+                </div>
+                <div id="openQuizzesEmpty" class="empty-state d-none">
+                    <i class="fas fa-calendar-check"></i>
+                    <h4>No open quizzes available</h4>
+                    <p class="text-muted">There are currently no quizzes available for you to take</p>
+                </div>
+            </div>
+
+            <!-- Closed Quizzes Tab -->
+            <div class="tab-pane fade" id="closed-quizzes" role="tabpanel" aria-labelledby="closed-tab">
+                <div id="closedQuizzesContainer" class="row">
+                    <!-- Closed quiz cards will be dynamically added here -->
+                </div>
+                <div id="closedQuizzesEmpty" class="empty-state d-none">
+                    <i class="fas fa-lock"></i>
+                    <h4>No closed quizzes</h4>
+                    <p class="text-muted">There are no closed quizzes at this time</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sample data - replace with actual data fetched from backend
+            const quizzes = [
+                {% for quiz in quizzes %}
+                {
+                    id: {{ quiz.id }},
+                    title: "{{ quiz.quiz_id }}",
+                    subjectId: {{ quiz.subject_id }},
+                    subjectName: "{{ quiz.subject.name }}",
+                    chapterId: {{ quiz.chapter_id }},
+                    chapterName: "{{ quiz.chapter.name }}",
+                    date: "{{ quiz.date }}",
+                    duration: {{ quiz.duration }},
+                    questionCount: {{ quiz.questions|length }},
+                    status: new Date("{{ quiz.date }}") > new Date() ? "open" : "closed"
+                },
+                {% endfor %}
+            ];
+
+            // Load subject-chapter relationship
+            const subjects = [
+                {% for subject in subjects %}
+                {
+                    id: {{ subject.id }},
+                    name: "{{ subject.name }}",
+                    chapters: [
+                        {% for chapter in subject.chapters %}
+                        {
+                            id: {{ chapter.id }},
+                            name: "{{ chapter.name }}"
+                        },
+                        {% endfor %}
+                    ]
+                },
+                {% endfor %}
+            ];
+
+            const subjectFilter = document.getElementById('subjectFilter');
+            const chapterFilter = document.getElementById('chapterFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const totalQuizCount = document.getElementById('totalQuizCount');
+
+            // Initialize quiz cards
+            renderQuizCards();
+
+            // Update chapter dropdown when subject changes
+            subjectFilter.addEventListener('change', function() {
+                updateChapterFilter();
+                renderQuizCards();
+            });
+
+            // Rerender when filters change
+            chapterFilter.addEventListener('change', renderQuizCards);
+            statusFilter.addEventListener('change', renderQuizCards);
+
+            // Update chapter dropdown options
+            function updateChapterFilter() {
+                const selectedSubject = subjectFilter.value;
+                
+                // Reset chapter filter
+                chapterFilter.innerHTML = '<option value="all">All Chapters</option>';
+                
+                if (selectedSubject !== 'all') {
+                    const subject = subjects.find(s => s.id == selectedSubject);
+                    if (subject && subject.chapters.length > 0) {
+                        subject.chapters.forEach(chapter => {
+                            const option = document.createElement('option');
+                            option.value = chapter.id;
+                            option.textContent = chapter.name;
+                            chapterFilter.appendChild(option);
+                        });
+                        chapterFilter.disabled = false;
+                    } else {
+                        chapterFilter.disabled = true;
+                    }
+                } else {
+                    chapterFilter.disabled = true;
+                }
+            }
+
+            // Filter quizzes based on selected criteria
+            function filterQuizzes() {
+                return quizzes.filter(quiz => {
+                    const subjectMatch = subjectFilter.value === 'all' || quiz.subjectId == subjectFilter.value;
+                    const chapterMatch = chapterFilter.value === 'all' || quiz.chapterId == chapterFilter.value;
+                    const statusMatch = statusFilter.value === 'all' || quiz.status === statusFilter.value;
+                    return subjectMatch && chapterMatch && statusMatch;
+                });
+            }
+
+            // Render quiz cards
+            function renderQuizCards() {
+                const filteredQuizzes = filterQuizzes();
+                const allContainer = document.getElementById('allQuizzesContainer');
+                const openContainer = document.getElementById('openQuizzesContainer');
+                const closedContainer = document.getElementById('closedQuizzesContainer');
+                
+                const allEmpty = document.getElementById('allQuizzesEmpty');
+                const openEmpty = document.getElementById('openQuizzesEmpty');
+                const closedEmpty = document.getElementById('closedQuizzesEmpty');
+                
+                // Clear previous content
+                allContainer.innerHTML = '';
+                openContainer.innerHTML = '';
+                closedContainer.innerHTML = '';
+                
+                // Update total count
+                totalQuizCount.textContent = `${filteredQuizzes.length} Quiz${filteredQuizzes.length === 1 ? '' : 'zes'}`;
+                
+                // Fill containers with filtered quizzes
+                const openQuizzes = filteredQuizzes.filter(quiz => quiz.status === 'open');
+                const closedQuizzes = filteredQuizzes.filter(quiz => quiz.status === 'closed');
+                
+                // Show/hide empty states
+                if (filteredQuizzes.length === 0) {
+                    allEmpty.classList.remove('d-none');
+                } else {
+                    allEmpty.classList.add('d-none');
+                }
+                
+                if (openQuizzes.length === 0) {
+                    openEmpty.classList.remove('d-none');
+                } else {
+                    openEmpty.classList.add('d-none');
+                }
+                
+                if (closedQuizzes.length === 0) {
+                    closedEmpty.classList.remove('d-none');
+                } else {
+                    closedEmpty.classList.add('d-none');
+                }
+                
+                // Render quizzes
+                filteredQuizzes.forEach(quiz => {
+                    // Add to all quizzes tab
+                    allContainer.appendChild(createQuizCard(quiz));
+                    
+                    // Add to appropriate status tab
+                    if (quiz.status === 'open') {
+                        openContainer.appendChild(createQuizCard(quiz));
+                    } else {
+                        closedContainer.appendChild(createQuizCard(quiz));
+                    }
+                });
+            }
+
+            // Create quiz card element
+            function createQuizCard(quiz) {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4';
+                
+                const card = document.createElement('div');
+                card.className = `card h-100 ${quiz.status === 'closed' ? 'closed-quiz' : ''}`;
+                
+                // Add status badge
+                const badgeColor = quiz.status === 'open' ? 'success' : 'secondary';
+                const badgeText = quiz.status === 'open' ? 'Open' : 'Closed';
+                card.innerHTML = `
+                    <div class="quiz-badge">
+                        <span class="badge bg-${badgeColor}">${badgeText}</span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">${quiz.title}</h5>
+                        <div class="quiz-info mb-3">
+                            <div><i class="fas fa-book me-2"></i>${quiz.subjectName}</div>
+                            <div><i class="fas fa-bookmark me-2"></i>${quiz.chapterName}</div>
+                            <div><i class="fas fa-calendar-alt me-2"></i>${formatDate(quiz.date)}</div>
+                            <div><i class="fas fa-clock me-2"></i>${quiz.duration} minutes</div>
+                            <div><i class="fas fa-question-circle me-2"></i>${quiz.questionCount} questions</div>
+                        </div>
+                        <div class="quiz-footer">
+                            ${quiz.status === 'open' ? 
+                                `<a href="/user/take-quiz/${quiz.id}" class="btn btn-primary">Start Quiz</a>` : 
+                                `<button class="btn btn-secondary" disabled>Quiz Closed</button>`
+                            }
+                            <span class="badge bg-light text-dark">${formatTimeLeft(quiz.date, quiz.status)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                col.appendChild(card);
+                return col;
+            }
+
+            // Format date for display
+            function formatDate(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { 
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            }
+
+            // Format time left for open quizzes or time since closed for closed quizzes
+            function formatTimeLeft(dateStr, status) {
+                const quizDate = new Date(dateStr);
+                const now = new Date();
+                const diffTime = Math.abs(quizDate - now);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (status === 'open') {
+                    if (diffDays > 30) {
+                        return `Opens in ${Math.floor(diffDays / 30)} month(s)`;
+                    } else if (diffDays > 0) {
+                        return `Opens in ${diffDays} day(s)`;
+                    } else {
+                        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                        if (diffHours > 0) {
+                            return `Opens in ${diffHours} hour(s)`;
+                        } else {
+                            const diffMinutes = Math.floor(diffTime / (1000 * 60));
+                            return `Opens in ${diffMinutes} minute(s)`;
+                        }
+                    }
+                } else {
+                    if (diffDays > 30) {
+                        return `Closed ${Math.floor(diffDays / 30)} month(s) ago`;
+                    } else if (diffDays > 0) {
+                        return `Closed ${diffDays} day(s) ago`;
+                    } else {
+                        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                        if (diffHours > 0) {
+                            return `Closed ${diffHours} hour(s) ago`;
+                        } else {
+                            const diffMinutes = Math.floor(diffTime / (1000 * 60));
+                            return `Closed ${diffMinutes} minute(s) ago`;
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

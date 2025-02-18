@@ -780,6 +780,7 @@ def admin_summary():
     
     return render_template(
         'admin/summary.html',
+        active_page='summary',
         total_subjects=total_subjects,
         total_chapters=total_chapters,
         total_quizzes=total_quizzes,
@@ -792,8 +793,36 @@ def admin_summary():
         quiz_question_data=quiz_question_data
     )
 
+@app.route('/user/quiz')
+@login_required
+def user_quiz():
+    # Get all subjects with their chapters
+    subjects = Subject.query.all()
+    
+    # Get all quizzes with additional information
+    quizzes = db.session.query(
+        Quiz,
+        Subject.name.label('subject_name'),
+        Chapter.name.label('chapter_name')
+    ).join(
+        Subject, Subject.id == Quiz.subject_id
+    ).join(
+        Chapter, Chapter.id == Quiz.chapter_id
+    ).all()
+    
+    # Process quizzes data
+    formatted_quizzes = []
+    for quiz_data in quizzes:
+        quiz = quiz_data[0]  # Get the Quiz object
+        quiz_dict = quiz.to_dict()
+        quiz_dict['subject'] = {'name': quiz_data.subject_name}
+        quiz_dict['chapter'] = {'name': quiz_data.chapter_name}
+        formatted_quizzes.append(quiz_dict)
+    
+    return render_template('user/user_quiz.html', subjects=subjects, quizzes=formatted_quizzes,active_page="user_quiz")
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_admin_account()
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0')
