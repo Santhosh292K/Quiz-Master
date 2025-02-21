@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Performance Summary</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <link href="/static/navbar.css" rel="stylesheet">
+    <style>
+        .dashboard-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2563eb;
+            margin: 10px 0;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .performance-table th,
+        .performance-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .performance-table th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+
+        .performance-table tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .score-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .score-good {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .score-average {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .score-poor {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div style="font-size: 150%;color: white;font-weight: bold;">
+                Quiz Master
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('user_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
+                    Dashboard
+                </a>
+                
+                <a href="{{ url_for('user_quiz') }}" {% if active_page == 'user_quiz' %}class="active"{% endif %}>
+                    Quiz
+                </a>
+                
+                <a href="{{ url_for('user_summary') }}" {% if active_page == 'user_summary' %}class="active"{% endif %}>
+                    Summary
+                </a>
+
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        {{ current_user.full_name[:1].upper() }}
+                    </div>
+                    <span class="user-name">{{ current_user.full_name }}</span>
+                    <span class="dropdown-arrow"></span>
+                    <div class="profile-dropdown">
+                        <a href="{{ url_for('profile') }}">
+                            Profile Settings
+                        </a>
+                        <a href="{{ url_for('logout') }}">
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="dashboard-container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Quizzes Attempted</h3>
+                <div class="stat-value" id="totalQuizzes">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Score</h3>
+                <div class="stat-value" id="averageScore">0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Time Spent</h3>
+                <div class="stat-value" id="totalTime">0h</div>
+            </div>
+            <div class="stat-card">
+                <h3>Subjects Covered</h3>
+                <div class="stat-value" id="subjectsCovered">0</div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-container">
+                <h3>Performance by Subject</h3>
+                <canvas id="subjectPerformanceChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Daily Activity</h3>
+                <canvas id="dailyActivityChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-container">
+                <h3>Time Distribution by Chapter</h3>
+                <canvas id="chapterTimeChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Score Trends</h3>
+                <canvas id="scoreTrendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>Recent Quiz Performance</h3>
+            <table class="performance-table">
+                <thead>
+                    <tr>
+                        <th>Quiz Date</th>
+                        <th>Subject</th>
+                        <th>Chapter</th>
+                        <th>Score</th>
+                        <th>Time Taken</th>
+                        <th>Questions</th>
+                    </tr>
+                </thead>
+                <tbody id="quizPerformanceBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Fetch and display user statistics
+        async function fetchUserStats() {
+            try {
+                const response = await fetch('/api/user/statistics');
+                const data = await response.json();
+                
+                // Update summary statistics
+                document.getElementById('totalQuizzes').textContent = data.totalQuizzes;
+                document.getElementById('averageScore').textContent = `${data.averageScore}%`;
+                document.getElementById('totalTime').textContent = `${data.totalTimeHours}h`;
+                document.getElementById('subjectsCovered').textContent = data.subjectsCovered;
+
+                // Create charts
+                createSubjectPerformanceChart(data.subjectPerformance);
+                createDailyActivityChart(data.dailyActivity);
+                createChapterTimeChart(data.chapterTime);
+                createScoreTrendChart(data.scoretrends);
+                
+                // Populate recent quiz table
+                populateQuizTable(data.recentQuizzes);
+            } catch (error) {
+                console.error('Error fetching user statistics:', error);
+            }
+        }
+
+        function createSubjectPerformanceChart(data) {
+            const ctx = document.getElementById('subjectPerformanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item.subject),
+                    datasets: [{
+                        label: 'Average Score',
+                        data: data.map(item => item.averageScore),
+                        backgroundColor: '#60a5fa',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDailyActivityChart(data) {
+            const ctx = document.getElementById('dailyActivityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.date),
+                    datasets: [{
+                        label: 'Minutes Spent',
+                        data: data.map(item => item.timeSpent),
+                        borderColor: '#34d399',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        }
+
+        function createChapterTimeChart(data) {
+            const ctx = document.getElementById('chapterTimeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.map(item => item.chapter),
+                    datasets: [{
+                        data: data.map(item => item.timeSpent),
+                        backgroundColor: [
+                            '#60a5fa',
+                            '#34d399',
+                            '#f472b6',
+                            '#fbbf24',
+                            '#a78bfa'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        }
+
+        function createScoreTrendChart(data) {
+            const ctx = document.getElementById('scoreTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.date),
+                    datasets: [{
+                        label: 'Score',
+                        data: data.map(item => item.score),
+                        borderColor: '#f472b6',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function populateQuizTable(quizzes) {
+            const tbody = document.getElementById('quizPerformanceBody');
+            tbody.innerHTML = '';
+            
+            quizzes.forEach(quiz => {
+                const row = document.createElement('tr');
+                const scoreClass = quiz.score >= 80 ? 'score-good' : 
+                                 quiz.score >= 60 ? 'score-average' : 
+                                 'score-poor';
+                
+                row.innerHTML = `
+                    <td>${new Date(quiz.date).toLocaleDateString()}</td>
+                    <td>${quiz.subject}</td>
+                    <td>${quiz.chapter}</td>
+                    <td><span class="score-badge ${scoreClass}">${quiz.score}%</span></td>
+                    <td>${quiz.timeTaken} min</td>
+                    <td>${quiz.totalQuestions}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Initialize the dashboard
+        fetchUserStats();
+    </script>
+</body>
+</html>

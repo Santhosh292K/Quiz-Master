@@ -24,7 +24,7 @@
                     Quiz
                 </a>
                 
-                <a href="#" {% if active_page == '' %}class="active"{% endif %}>
+                <a href="{{ url_for('user_summary') }}" {% if active_page == 'user_summary' %}class="active"{% endif %}>
                     Summary
                 </a>
 
@@ -35,7 +35,7 @@
                     <span class="user-name">{{ current_user.full_name }}</span>
                     <span class="dropdown-arrow"></span>
                     <div class="profile-dropdown">
-                        <a href="#">
+                        <a href="{{ url_for('profile') }}">
                             Profile Settings
                         </a>
                         <a href="{{ url_for('logout') }}">
@@ -310,7 +310,7 @@
                         </div>
                         <div class="quiz-footer">
                             ${quiz.status === 'open' ? 
-                                `<a href="/user/take-quiz/${quiz.id}" class="btn btn-primary">Start Quiz</a>` : 
+                                `<a href="window.location.href='/quiz/{{ quiz.id }}'" class="btn btn-primary">Start Quiz</a>` : 
                                 `<button class="btn btn-secondary" disabled>Quiz Closed</button>`
                             }
                             <span class="badge bg-light text-dark">${formatTimeLeft(quiz.date, quiz.status)}</span>

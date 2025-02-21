@@ -23,7 +23,7 @@
                     Quiz
                 </a>
                 
-                <a href="#" {% if active_page == '' %}class="active"{% endif %}>
+                <a href="{{ url_for('user_summary') }}" {% if active_page == 'user_summary' %}class="active"{% endif %}>
                     Summary
                 </a>
 
@@ -34,7 +34,7 @@
                     <span class="user-name">{{ current_user.full_name }}</span>
                     <span class="dropdown-arrow"></span>
                     <div class="profile-dropdown">
-                        <a href="#">
+                        <a href="{{ url_for('profile') }}">
                             Profile Settings
                         </a>
                         <a href="{{ url_for('logout') }}">

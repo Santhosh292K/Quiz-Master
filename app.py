@@ -4,7 +4,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import re
 from datetime import datetime
-from datetime import datetime, timedelta  # Add this import at the top
+from datetime import datetime, timedelta
+from sqlalchemy import func
 
 
 app = Flask(__name__)
@@ -21,9 +22,11 @@ class User(db.Model):
     qualification = db.Column(db.String(100), nullable=False)
     dob = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    quiz_attempts = db.relationship('QuizAttempt', backref='user', lazy=True)
 
     def __repr__(self):
         return f'<User {self.email}>'
+    
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,6 +34,7 @@ class Subject(db.Model):
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     chapters = db.relationship('Chapter', backref='subject', lazy=True, cascade="all, delete-orphan")
+
 
 class Chapter(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,12 +47,13 @@ class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     quiz_id = db.Column(db.String(50), unique=True, nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-    chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id'), nullable=False)  # Add this line
+    chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     duration = db.Column(db.Integer, nullable=False)  # in minutes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     questions = db.relationship('Question', backref='quiz', lazy=True, cascade="all, delete-orphan")
-    
+    attempts = db.relationship('QuizAttempt', backref='quiz', lazy=True)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -59,6 +64,8 @@ class Quiz(db.Model):
             'duration': self.duration,
             'questions': [question.to_dict() for question in self.questions]
         }
+    
+
 # Add the explanation field to the Question model
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -82,7 +89,7 @@ class Option(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
     option_text = db.Column(db.Text, nullable=False)
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -821,8 +828,342 @@ def user_quiz():
     
     return render_template('user/user_quiz.html', subjects=subjects, quizzes=formatted_quizzes,active_page="user_quiz")
 
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        try:
+            user = get_current_user()
+            
+            # Update only allowed fields
+            user.full_name = request.form.get('full_name')
+            user.qualification = request.form.get('qualification')
+            user.dob = datetime.strptime(request.form.get('dob'), '%Y-%m-%d').date()
+            
+            # Handle password change if provided
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+            
+            if current_password and new_password:
+                if check_password_hash(user.password, current_password):
+                    user.password = generate_password_hash(new_password)
+                else:
+                    flash('Current password is incorrect', 'error')
+                    return redirect(url_for('profile'))
+            
+            db.session.commit()
+            flash('Profile updated successfully!', 'success')
+            return redirect(url_for('profile'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating profile: {str(e)}', 'error')
+            return redirect(url_for('profile'))
+            
+    return render_template('user/user_profile.html')
+
+from datetime import datetime, timedelta
+from sqlalchemy import func, and_
+
+class QuizAttempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Float, nullable=True)
+    
+    # Add relationship to store question-wise timing
+    question_attempts = db.relationship('QuestionAttempt', backref='quiz_attempt', lazy=True)
+
+class QuestionAttempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempt.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    selected_option_id = db.Column(db.Integer, db.ForeignKey('option.id'), nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=True)
+
+@app.route('/user/summary')
+@login_required
+def user_summary():
+    return render_template('user/user_summary.html', active_page='user_summary')
+
+@app.route('/api/user/statistics')
+@login_required
+def get_user_statistics():
+    user = get_current_user()
+    current_date = datetime.utcnow()
+    thirty_days_ago = current_date - timedelta(days=30)
+    
+    # Get basic statistics
+    quiz_attempts = QuizAttempt.query.filter_by(user_id=user.id).all()
+    total_quizzes = len(quiz_attempts)
+    
+    # Calculate average score
+    average_score = db.session.query(func.avg(QuizAttempt.score))\
+        .filter_by(user_id=user.id)\
+        .scalar() or 0
+        
+    # Calculate total time spent
+    total_time = sum(
+        (attempt.end_time - attempt.start_time).total_seconds() / 3600 
+        for attempt in quiz_attempts 
+        if attempt.end_time
+    )
+    
+    # Get subject-wise performance
+    subject_performance = db.session.query(
+        Subject.name.label('subject'),
+        func.avg(QuizAttempt.score).label('averageScore')
+    ).join(Quiz)\
+        .join(QuizAttempt)\
+        .filter(QuizAttempt.user_id == user.id)\
+        .group_by(Subject.name)\
+        .all()
+
+    # Get daily activity for last 30 days
+    daily_activity = []
+    for i in range(30):
+        date = current_date - timedelta(days=i)
+        time_spent = db.session.query(
+            func.sum(
+                func.extract('epoch', QuizAttempt.end_time) - 
+                func.extract('epoch', QuizAttempt.start_time)
+            )/60
+        ).filter(
+            QuizAttempt.user_id == user.id,
+            func.date(QuizAttempt.start_time) == date.date()
+        ).scalar() or 0
+        
+        daily_activity.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'timeSpent': round(time_spent, 2)
+        })
+
+    # Get recent quizzes
+    recent_quizzes = db.session.query(
+        QuizAttempt.start_time.label('date'),
+        Subject.name.label('subject'),
+        Chapter.name.label('chapter'),
+        QuizAttempt.score,
+        func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time)/60.0.label('timeTaken'),
+        func.count(Question.id).label('totalQuestions')
+    ).join(Quiz)\
+        .join(Subject)\
+        .join(Chapter)\
+        .join(Question)\
+        .filter(
+            QuizAttempt.user_id == user.id,
+            QuizAttempt.end_time.isnot(None)
+        ).group_by(
+            QuizAttempt.id,
+            QuizAttempt.start_time,
+            Subject.name,
+            Chapter.name,
+            QuizAttempt.score,
+            QuizAttempt.end_time
+        ).order_by(QuizAttempt.start_time.desc())\
+        .limit(10)\
+        .all()
+
+    return jsonify({
+        'totalQuizzes': total_quizzes,
+        'averageScore': round(average_score, 1),
+        'totalTimeHours': round(total_time, 1),
+        'subjectsCovered': len(subject_performance),
+        'subjectPerformance': [
+            {'subject': item.subject, 'averageScore': round(item.averageScore, 1)}
+            for item in subject_performance
+        ],
+        'dailyActivity': daily_activity,
+        'recentQuizzes': [
+            {
+                'date': quiz.date.isoformat(),
+                'subject': quiz.subject,
+                'chapter': quiz.chapter,
+                'score': round(quiz.score, 1),
+                'timeTaken': round(quiz.timeTaken, 1),
+                'totalQuestions': quiz.totalQuestions
+            }
+            for quiz in recent_quizzes
+        ]
+    })
+
+@app.route('/api/quiz/<int:quiz_id>/time-analysis')
+@login_required
+def get_quiz_time_analysis(quiz_id):
+    """Get time spent per question for a specific quiz attempt"""
+    user = get_current_user()
+    
+    # Get the latest attempt for this quiz
+    latest_attempt = QuizAttempt.query.filter_by(
+        user_id=user.id,
+        quiz_id=quiz_id
+    ).order_by(QuizAttempt.start_time.desc()).first_or_404()
+    
+    # Get question-wise timing
+    question_timing = db.session.query(
+        Question.id,
+        Question.text,
+        func.extract('epoch', QuestionAttempt.end_time - QuestionAttempt.start_time).label('time_spent'),
+        QuestionAttempt.is_correct
+    ).join(QuestionAttempt)\
+        .filter(QuestionAttempt.quiz_attempt_id == latest_attempt.id)\
+        .all()
+    
+    return jsonify({
+        'quizId': quiz_id,
+        'attemptId': latest_attempt.id,
+        'questionAnalysis': [
+            {
+                'questionId': q.id,
+                'questionText': q.text,
+                'timeSpentSeconds': round(q.time_spent, 1),
+                'isCorrect': q.is_correct
+            }
+            for q in question_timing
+        ]
+    })
+
+@app.route('/api/user/performance-comparison')
+@login_required
+def get_performance_comparison():
+    """Compare user's performance with class average"""
+    user = get_current_user()
+    
+    # Get user's average scores by subject
+    user_scores = db.session.query(
+        Subject.name.label('subject'),
+        func.avg(QuizAttempt.score).label('user_avg')
+    ).join(Quiz)\
+        .join(QuizAttempt)\
+        .filter(QuizAttempt.user_id == user.id)\
+        .group_by(Subject.name)\
+        .all()
+    
+    # Get class average scores by subject
+    class_scores = db.session.query(
+        Subject.name.label('subject'),
+        func.avg(QuizAttempt.score).label('class_avg')
+    ).join(Quiz)\
+        .join(QuizAttempt)\
+        .group_by(Subject.name)\
+        .all()
+    
+    return jsonify({
+        'comparison': [
+            {
+                'subject': user_score.subject,
+                'userAverage': round(user_score.user_avg, 1),
+                'classAverage': round(
+                    next(
+                        (s.class_avg for s in class_scores if s.subject == user_score.subject),
+                        0
+                    ),
+                    1
+                )
+            }
+            for user_score in user_scores
+        ]
+    })
+
+
+@app.route('/quiz/<int:quiz_id>')
+@login_required
+def take_quiz(quiz_id):
+    # Check if quiz exists and is available
+    quiz = Quiz.query.get_or_404(quiz_id)
+    
+    # Check if user has already attempted this quiz
+    existing_attempt = QuizAttempt.query.filter_by(
+        user_id=current_user.id,
+        quiz_id=quiz_id
+    ).first()
+    
+    if existing_attempt and existing_attempt.end_time:
+        flash('You have already completed this quiz.', 'info')
+        return redirect(url_for('quiz_result', attempt_id=existing_attempt.id))
+    
+    # Create new quiz attempt
+    attempt = QuizAttempt(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+        start_time=datetime.utcnow()
+    )
+    db.session.add(attempt)
+    db.session.commit()
+    
+    return render_template('quiz_page.html', quiz=quiz)
+
+@app.route('/api/quiz/<int:quiz_id>')
+@login_required
+def get_quiz_data(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    return jsonify({
+        'id': quiz.id,
+        'title': quiz.quiz_id,
+        'duration': quiz.duration,
+        'questions': [question.to_dict() for question in quiz.questions]
+    })
+
+@app.route('/api/submit-quiz', methods=['POST'])
+@login_required
+def submit_quiz():
+    data = request.get_json()
+    attempt = QuizAttempt.query.filter_by(
+        user_id=current_user.id,
+        end_time=None
+    ).first_or_404()
+    
+    # Record end time
+    attempt.end_time = datetime.utcnow()
+    
+    # Calculate score
+    total_questions = len(attempt.quiz.questions)
+    correct_answers = 0
+    
+    for question_index, selected_option in data['answers'].items():
+        question = attempt.quiz.questions[int(question_index)]
+        is_correct = selected_option == question.correct_option_index
+        
+        # Record question attempt
+        question_attempt = QuestionAttempt(
+            quiz_attempt_id=attempt.id,
+            question_id=question.id,
+            selected_option_id=question.options[selected_option].id,
+            is_correct=is_correct
+        )
+        db.session.add(question_attempt)
+        
+        if is_correct:
+            correct_answers += 1
+    
+    # Calculate percentage score
+    attempt.score = (correct_answers / total_questions) * 100
+    db.session.commit()
+    
+    return jsonify({
+        'attemptId': attempt.id,
+        'score': attempt.score
+    })
+
+@app.route('/quiz-result/<int:attempt_id>')
+@login_required
+def quiz_result(attempt_id):
+    attempt = QuizAttempt.query.get_or_404(attempt_id)
+    
+    # Ensure user can only view their own results
+    if attempt.user_id != current_user.id:
+        abort(403)
+    
+    return render_template('quiz_result.html', attempt=attempt)
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_admin_account()
-    app.run(debug=True,host='0.0.0.0')
+    app.run(debug=True)
