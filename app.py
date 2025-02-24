@@ -13,8 +13,9 @@ app.config['SECRET_KEY'] = 'your_secret_key_here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
-# Models
 class User(db.Model):
+    __table_args__ = {'extend_existing': True}
+    
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -22,11 +23,10 @@ class User(db.Model):
     qualification = db.Column(db.String(100), nullable=False)
     dob = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    quiz_attempts = db.relationship('QuizAttempt', backref='user', lazy=True)
+    quiz_attempts = db.relationship('QuizAttempt', back_populates='user', lazy=True)
 
     def __repr__(self):
         return f'<User {self.email}>'
-    
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -866,18 +866,10 @@ def profile():
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_
 
-class QuizAttempt(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False)
-    end_time = db.Column(db.DateTime, nullable=True)
-    score = db.Column(db.Float, nullable=True)
-    
-    # Add relationship to store question-wise timing
-    question_attempts = db.relationship('QuestionAttempt', backref='quiz_attempt', lazy=True)
 
 class QuestionAttempt(db.Model):
+    __tablename__ = 'question_attempt'
+    
     id = db.Column(db.Integer, primary_key=True)
     quiz_attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempt.id'), nullable=False)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
@@ -885,6 +877,26 @@ class QuestionAttempt(db.Model):
     end_time = db.Column(db.DateTime, nullable=True)
     selected_option_id = db.Column(db.Integer, db.ForeignKey('option.id'), nullable=True)
     is_correct = db.Column(db.Boolean, nullable=True)
+
+    def __repr__(self):
+        return f'<QuestionAttempt {self.id} for Question {self.question_id}>'
+class QuizAttempt(db.Model):
+    __tablename__ = 'quiz_attempt'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Float, nullable=True)
+    
+    # Relationships
+    user = db.relationship('User', back_populates='quiz_attempts')
+    question_attempts = db.relationship('QuestionAttempt', backref='quiz_attempt', lazy=True, cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f'<QuizAttempt {self.id} by User {self.user_id} for Quiz {self.quiz_id}>'
+
 
 @app.route('/user/summary')
 @login_required
@@ -1069,97 +1081,277 @@ def get_performance_comparison():
             for user_score in user_scores
         ]
     })
+from flask import jsonify, request, render_template, redirect, url_for, flash, abort
+from datetime import datetime, timedelta
+from sqlalchemy import and_
+from functools import wraps
 
+# Custom decorator for quiz attempt validation
+def validate_quiz_attempt(f):
+    @wraps(f)
+    def decorated_function(quiz_id, *args, **kwargs):
+        quiz = Quiz.query.get_or_404(quiz_id)
+        attempt = QuizAttempt.query.filter(
+            and_(
+                QuizAttempt.user_id == get_current_user().id,
+                QuizAttempt.quiz_id == quiz_id,
+                QuizAttempt.end_time.is_(None)
+            )
+        ).first()
+        
+        if attempt:
+            time_elapsed = datetime.utcnow() - attempt.start_time
+            if time_elapsed > timedelta(minutes=quiz.duration):
+                attempt.end_time = attempt.start_time + timedelta(minutes=quiz.duration)
+                attempt.score = 0
+                db.session.commit()
+                flash('Quiz attempt expired', 'warning')
+                return redirect(url_for('quiz_result', attempt_id=attempt.id))
+        
+        return f(quiz_id, quiz=quiz, attempt=attempt, *args, **kwargs)
+    return decorated_function
 
-@app.route('/quiz/<int:quiz_id>')
+# Quiz taking routes
+@app.route('/quiz/<int:quiz_id>/start')
 @login_required
-def take_quiz(quiz_id):
-    # Check if quiz exists and is available
+def start_quiz(quiz_id):
+    """Initialize a new quiz attempt or resume existing attempt"""
     quiz = Quiz.query.get_or_404(quiz_id)
+    user = get_current_user()
     
-    # Check if user has already attempted this quiz
-    existing_attempt = QuizAttempt.query.filter_by(
-        user_id=current_user.id,
-        quiz_id=quiz_id
+    # Check for existing incomplete attempt
+    existing_attempt = QuizAttempt.query.filter(
+        and_(
+            QuizAttempt.user_id == user.id,
+            QuizAttempt.quiz_id == quiz_id,
+            QuizAttempt.end_time.is_(None)
+        )
     ).first()
     
-    if existing_attempt and existing_attempt.end_time:
-        flash('You have already completed this quiz.', 'info')
-        return redirect(url_for('quiz_result', attempt_id=existing_attempt.id))
+    if existing_attempt:
+        time_elapsed = datetime.utcnow() - existing_attempt.start_time
+        if time_elapsed > timedelta(minutes=quiz.duration):
+            existing_attempt.end_time = existing_attempt.start_time + timedelta(minutes=quiz.duration)
+            existing_attempt.score = 0
+            db.session.commit()
+            flash('Previous attempt expired. Starting new attempt.', 'info')
+        else:
+            return redirect(url_for('take_quiz', quiz_id=quiz_id))
     
-    # Create new quiz attempt
-    attempt = QuizAttempt(
-        user_id=current_user.id,
+    # Check for completed attempts
+    completed_attempt = QuizAttempt.query.filter(
+        and_(
+            QuizAttempt.user_id == user.id,
+            QuizAttempt.quiz_id == quiz_id,
+            QuizAttempt.end_time.isnot(None)
+        )
+    ).first()
+    
+    if completed_attempt:
+        flash('You have already completed this quiz. Starting new attempt.', 'info')
+    
+    # Create new attempt
+    new_attempt = QuizAttempt(
+        user_id=user.id,
         quiz_id=quiz_id,
         start_time=datetime.utcnow()
     )
-    db.session.add(attempt)
+    db.session.add(new_attempt)
     db.session.commit()
     
-    return render_template('quiz_page.html', quiz=quiz)
+    return redirect(url_for('take_quiz', quiz_id=quiz_id))
 
-@app.route('/api/quiz/<int:quiz_id>')
+@app.route('/quiz/<int:quiz_id>')
 @login_required
-def get_quiz_data(quiz_id):
-    quiz = Quiz.query.get_or_404(quiz_id)
+@validate_quiz_attempt
+def take_quiz(quiz_id, quiz, attempt):
+    """Display quiz interface"""
+    if not attempt:
+        return redirect(url_for('start_quiz', quiz_id=quiz_id))
+    
+    time_remaining = quiz.duration * 60 - (datetime.utcnow() - attempt.start_time).total_seconds()
+    
+    return render_template('user/quiz_page.html', 
+                         quiz=quiz, 
+                         attempt=attempt,
+                         time_remaining=time_remaining)
+
+@app.route('/api/quiz/<int:quiz_id>/state')
+@login_required
+@validate_quiz_attempt
+def get_quiz_state(quiz_id, quiz, attempt):
+    if not attempt:
+        return jsonify({'error': 'No active quiz attempt'}), 404
+    
+    # Get answered questions with full details
+    question_attempts = QuestionAttempt.query.filter_by(
+        quiz_attempt_id=attempt.id
+    ).all()
+    
+    answered_questions = {}
+    for qa in question_attempts:
+        answered_questions[qa.question_id] = {
+            'selected_option_id': qa.selected_option_id,
+            'is_correct': qa.is_correct,
+            'time_spent': (qa.end_time - qa.start_time).total_seconds() if qa.end_time else None
+        }
+    
+    time_remaining = quiz.duration * 60 - (datetime.utcnow() - attempt.start_time).total_seconds()
+    
     return jsonify({
-        'id': quiz.id,
-        'title': quiz.quiz_id,
-        'duration': quiz.duration,
-        'questions': [question.to_dict() for question in quiz.questions]
+        'quiz_id': quiz.id,
+        'attempt_id': attempt.id,
+        'time_remaining': max(0, time_remaining),
+        'answered_questions': answered_questions,
+        'total_questions': len(quiz.questions),
+        'is_complete': attempt.end_time is not None,
+        'score': attempt.score if attempt.end_time else None
     })
 
-@app.route('/api/submit-quiz', methods=['POST'])
+@app.route('/api/quiz/<int:quiz_id>/question/<int:question_id>/answer', methods=['POST'])
 @login_required
-def submit_quiz():
+@validate_quiz_attempt
+def answer_question(quiz_id, question_id, quiz, attempt):
+    """Record an answer for a specific question"""
+    if not attempt:
+        return jsonify({'error': 'No active quiz attempt'}), 404
+    
     data = request.get_json()
-    attempt = QuizAttempt.query.filter_by(
-        user_id=current_user.id,
-        end_time=None
-    ).first_or_404()
+    if 'selected_option' not in data:
+        return jsonify({'error': 'Selected option not provided'}), 400
     
-    # Record end time
-    attempt.end_time = datetime.utcnow()
+    question = Question.query.get_or_404(question_id)
+    if question.quiz_id != quiz_id:
+        return jsonify({'error': 'Question does not belong to this quiz'}), 400
     
-    # Calculate score
-    total_questions = len(attempt.quiz.questions)
-    correct_answers = 0
+    selected_option = data['selected_option']
+    if not (0 <= selected_option < len(question.options)):
+        return jsonify({'error': 'Invalid option selected'}), 400
     
-    for question_index, selected_option in data['answers'].items():
-        question = attempt.quiz.questions[int(question_index)]
-        is_correct = selected_option == question.correct_option_index
-        
-        # Record question attempt
+    # Record or update question attempt
+    question_attempt = QuestionAttempt.query.filter_by(
+        quiz_attempt_id=attempt.id,
+        question_id=question_id
+    ).first()
+    
+    if not question_attempt:
         question_attempt = QuestionAttempt(
             quiz_attempt_id=attempt.id,
-            question_id=question.id,
-            selected_option_id=question.options[selected_option].id,
-            is_correct=is_correct
+            question_id=question_id,
+            start_time=datetime.utcnow()
         )
         db.session.add(question_attempt)
-        
-        if is_correct:
-            correct_answers += 1
     
-    # Calculate percentage score
-    attempt.score = (correct_answers / total_questions) * 100
-    db.session.commit()
+    question_attempt.selected_option_id = question.options[selected_option].id
+    question_attempt.end_time = datetime.utcnow()
+    question_attempt.is_correct = (selected_option == question.correct_option_index)
     
-    return jsonify({
-        'attemptId': attempt.id,
-        'score': attempt.score
-    })
+    try:
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save answer'}), 500
 
-@app.route('/quiz-result/<int:attempt_id>')
+@app.route('/api/quiz/<int:quiz_id>/submit', methods=['POST'])
+@login_required
+@validate_quiz_attempt
+def submit_quiz(quiz_id, quiz, attempt):
+    """Submit the quiz and calculate final score"""
+    if not attempt:
+        return jsonify({'error': 'No active quiz attempt'}), 404
+    
+    # Calculate score
+    question_attempts = QuestionAttempt.query.filter_by(
+        quiz_attempt_id=attempt.id
+    ).all()
+    
+    total_questions = len(quiz.questions)
+    correct_answers = sum(1 for qa in question_attempts if qa.is_correct)
+    
+    # Record final score and end time
+    attempt.score = (correct_answers / total_questions) * 100
+    attempt.end_time = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'attempt_id': attempt.id,
+            'score': attempt.score,
+            'redirect_url': url_for('quiz_result', attempt_id=attempt.id)
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to submit quiz'}), 500
+
+@app.route('/quiz/result/<int:attempt_id>')
 @login_required
 def quiz_result(attempt_id):
+    """Display quiz results"""
     attempt = QuizAttempt.query.get_or_404(attempt_id)
     
     # Ensure user can only view their own results
-    if attempt.user_id != current_user.id:
+    if attempt.user_id != get_current_user().id:
         abort(403)
     
-    return render_template('quiz_result.html', attempt=attempt)
+    # Get question-wise results
+    question_results = []
+    for question in attempt.quiz.questions:
+        attempt_data = QuestionAttempt.query.filter_by(
+            quiz_attempt_id=attempt.id,
+            question_id=question.id
+        ).first()
+        
+        if attempt_data:
+            result = {
+                'question': question.question_text,
+                'selected_option': next(
+                    (opt.option_text for opt in question.options 
+                     if opt.id == attempt_data.selected_option_id),
+                    None
+                ),
+                'correct_option': question.options[question.correct_option_index].option_text,
+                'is_correct': attempt_data.is_correct,
+                'explanation': question.explanation,
+                'time_spent': (attempt_data.end_time - attempt_data.start_time).total_seconds() \
+                    if attempt_data.end_time else None
+            }
+            question_results.append(result)
+    
+    return render_template(
+        'user/quiz_result.html',
+        attempt=attempt,
+        question_results=question_results,
+        total_time=(attempt.end_time - attempt.start_time).total_seconds()
+    )
+
+
+@app.route('/api/quiz/<int:quiz_id>/questions')
+@login_required
+@validate_quiz_attempt
+def get_quiz_questions(quiz_id, quiz, attempt):
+    """Get quiz questions for an active attempt"""
+    if not attempt:
+        return jsonify({'error': 'No active quiz attempt'}), 404
+    
+    questions = []
+    for question in quiz.questions:
+        questions.append({
+            'id': question.id,
+            'text': question.question_text,
+            'options': [{'id': opt.id, 'text': opt.option_text} 
+                       for opt in question.options]
+        })
+    
+    return jsonify({
+        'quiz_id': quiz.id,
+        'title': quiz.quiz_id,
+        'questions': questions,
+        'duration': quiz.duration,
+        'attempt_id': attempt.id
+    })
+
+
 
 
 if __name__ == '__main__':

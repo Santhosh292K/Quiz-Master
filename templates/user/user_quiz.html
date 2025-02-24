@@ -309,12 +309,12 @@
                             <div><i class="fas fa-question-circle me-2"></i>${quiz.questionCount} questions</div>
                         </div>
                         <div class="quiz-footer">
-                            ${quiz.status === 'open' ? 
-                                `<a href="window.location.href='/quiz/{{ quiz.id }}'" class="btn btn-primary">Start Quiz</a>` : 
-                                `<button class="btn btn-secondary" disabled>Quiz Closed</button>`
-                            }
-                            <span class="badge bg-light text-dark">${formatTimeLeft(quiz.date, quiz.status)}</span>
-                        </div>
+    ${quiz.status === 'open' ? 
+        `<a href="/quiz/${quiz.id}/start" class="btn btn-primary">Start Quiz</a>` : 
+        `<button class="btn btn-secondary" disabled>Quiz Closed</button>`
+    }
+    <span class="badge bg-light text-dark">${formatTimeLeft(quiz.date, quiz.status)}</span>
+</div>
                     </div>
                 `;
                 

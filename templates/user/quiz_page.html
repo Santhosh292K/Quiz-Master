@@ -3,231 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Interface</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Quiz Page</title>
+    <link href="/static/quiz_page.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen p-6">
-        <!-- Quiz Header -->
-        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-            <div class="p-6 bg-indigo-600">
-                <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold text-white" id="quizTitle">Loading Quiz...</h1>
-                    <div class="flex items-center space-x-4">
-                        <div class="bg-white rounded-lg px-4 py-2 flex items-center">
-                            <i class="fas fa-clock text-indigo-600 mr-2"></i>
-                            <span id="timer" class="font-mono text-indigo-600 text-xl">00:00</span>
-                        </div>
-                        <div class="bg-white rounded-lg px-4 py-2">
-                            <span class="text-indigo-600">
-                                Question <span id="currentQuestion">1</span>/<span id="totalQuestions">10</span>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Bar -->
-            <div class="w-full bg-gray-200 h-1">
-                <div id="progressBar" class="bg-green-500 h-1 transition-all duration-300" style="width: 0%"></div>
-            </div>
-
-            <!-- Quiz Content -->
-            <div class="p-6">
-                <!-- Question -->
-                <div class="mb-8">
-                    <h2 id="questionText" class="text-xl font-semibold text-gray-800 mb-4">Loading question...</h2>
-                    <div id="optionsContainer" class="space-y-4">
-                        <!-- Options will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Navigation -->
-                <div class="flex justify-between items-center mt-8">
-                    <button id="prevBtn" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-arrow-left mr-2"></i> Previous
-                    </button>
-                    <button id="nextBtn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                        Next <i class="fas fa-arrow-right ml-2"></i>
-                    </button>
-                </div>
-            </div>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <div class="mb-4">
+            <h2 class="text-2xl font-bold" id="quiz-title">Quiz</h2>
+            <div id="timer" class="text-lg">Time Remaining: <span id="time-display"></span></div>
         </div>
 
-        <!-- Question Navigation -->
-        <div class="max-w-4xl mx-auto mt-6 bg-white rounded-lg shadow-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Question Navigation</h3>
-            <div id="questionNav" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-                <!-- Question numbers will be inserted here -->
-            </div>
+        <div id="quiz-content" class="space-y-6">
+            <!-- Questions will be loaded here dynamically -->
+        </div>
+
+        <div class="mt-8">
+            <button id="submit-quiz" class="bg-blue-500 text-white px-6 py-2 rounded">
+                Submit Quiz
+            </button>
         </div>
     </div>
 
     <script>
-        class Quiz {
-            constructor() {
-                this.currentQuestionIndex = 0;
-                this.questions = [];
-                this.answers = {};
-                this.timeLeft = 0;
-                this.timerInterval = null;
-                this.initializeElements();
-                this.attachEventListeners();
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize with sample data (replace with actual data in production)
+            let timeRemaining = 3600; // 1 hour in seconds
+            const quizId = 1; // Sample quiz ID
+            let questions = [];
+            let currentAnswers = {};
 
-            initializeElements() {
-                this.elements = {
-                    timer: document.getElementById('timer'),
-                    questionText: document.getElementById('questionText'),
-                    optionsContainer: document.getElementById('optionsContainer'),
-                    prevBtn: document.getElementById('prevBtn'),
-                    nextBtn: document.getElementById('nextBtn'),
-                    currentQuestion: document.getElementById('currentQuestion'),
-                    totalQuestions: document.getElementById('totalQuestions'),
-                    progressBar: document.getElementById('progressBar'),
-                    questionNav: document.getElementById('questionNav'),
-                    quizTitle: document.getElementById('quizTitle')
-                };
-            }
-
-            attachEventListeners() {
-                this.elements.prevBtn.addEventListener('click', () => this.previousQuestion());
-                this.elements.nextBtn.addEventListener('click', () => this.nextQuestion());
-            }
-
-            async loadQuiz(quizId) {
-                try {
-                    const response = await fetch(`/api/quiz/${quizId}`);
-                    const data = await response.json();
-                    this.questions = data.questions;
-                    this.timeLeft = data.duration * 60; // Convert minutes to seconds
-                    this.elements.quizTitle.textContent = data.title;
-                    this.elements.totalQuestions.textContent = this.questions.length;
-                    this.setupQuestionNavigation();
-                    this.startTimer();
-                    this.showQuestion(0);
-                } catch (error) {
-                    console.error('Error loading quiz:', error);
-                }
-            }
-
-            setupQuestionNavigation() {
-                this.elements.questionNav.innerHTML = '';
-                for (let i = 0; i < this.questions.length; i++) {
-                    const button = document.createElement('button');
-                    button.className = 'w-full py-2 text-center rounded-lg text-sm font-medium transition-colors';
-                    button.textContent = i + 1;
-                    this.updateQuestionButton(button, i);
-                    button.addEventListener('click', () => this.showQuestion(i));
-                    this.elements.questionNav.appendChild(button);
-                }
-            }
-
-            updateQuestionButton(button, index) {
-                if (index === this.currentQuestionIndex) {
-                    button.className = 'w-full py-2 text-center rounded-lg text-sm font-medium bg-indigo-600 text-white';
-                } else if (this.answers[index] !== undefined) {
-                    button.className = 'w-full py-2 text-center rounded-lg text-sm font-medium bg-green-500 text-white';
-                } else {
-                    button.className = 'w-full py-2 text-center rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300';
-                }
-            }
-
-            showQuestion(index) {
-                this.currentQuestionIndex = index;
-                const question = this.questions[index];
-                
-                this.elements.questionText.textContent = question.question_text;
-                this.elements.currentQuestion.textContent = index + 1;
-                this.elements.progressBar.style.width = `${((index + 1) / this.questions.length) * 100}%`;
-                
-                this.elements.optionsContainer.innerHTML = '';
-                question.options.forEach((option, optionIndex) => {
-                    const optionDiv = document.createElement('div');
-                    optionDiv.className = `p-4 border rounded-lg cursor-pointer transition-colors ${
-                        this.answers[index] === optionIndex ? 'bg-indigo-100 border-indigo-500' : 'hover:bg-gray-50'
-                    }`;
-                    optionDiv.textContent = option.option_text;
-                    optionDiv.addEventListener('click', () => this.selectOption(optionIndex));
-                    this.elements.optionsContainer.appendChild(optionDiv);
+            // Load quiz questions
+            fetch(`/api/quiz/${quizId}/questions`)
+                .then(response => response.json())
+                .then(data => {
+                    questions = data.questions;
+                    renderQuestions();
+                    startTimer();
+                    loadQuizState();
                 });
 
-                this.updateNavigation();
-                this.setupQuestionNavigation();
+            function renderQuestions() {
+                const container = document.getElementById('quiz-content');
+                questions.forEach(question => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'question-container p-4 border rounded';
+                    questionDiv.innerHTML = `
+                        <p class="font-semibold mb-2">${question.text}</p>
+                        <div class="options-container space-y-2">
+                            ${question.options.map((option, index) => `
+                                <div class="option">
+                                    <input type="radio" 
+                                           name="question_${question.id}" 
+                                           value="${index}"
+                                           id="q${question.id}_opt${index}"
+                                           onchange="handleAnswerSubmission(${question.id}, ${index})">
+                                    <label for="q${question.id}_opt${index}">${option.text}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    container.appendChild(questionDiv);
+                });
             }
 
-            selectOption(optionIndex) {
-                this.answers[this.currentQuestionIndex] = optionIndex;
-                this.showQuestion(this.currentQuestionIndex);
+            function loadQuizState() {
+                fetch(`/api/quiz/${quizId}/state`)
+                    .then(response => response.json())
+                    .then(data => {
+                        currentAnswers = data.answered_questions;
+                        // Restore previous answers
+                        Object.entries(currentAnswers).forEach(([questionId, answer]) => {
+                            const radio = document.querySelector(
+                                `input[name="question_${questionId}"][value="${answer.selected_option}"]`
+                            );
+                            if (radio) radio.checked = true;
+                        });
+                    });
             }
 
-            updateNavigation() {
-                this.elements.prevBtn.disabled = this.currentQuestionIndex === 0;
-                if (this.currentQuestionIndex === this.questions.length - 1) {
-                    this.elements.nextBtn.textContent = 'Submit Quiz';
-                    this.elements.nextBtn.className = 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors';
-                } else {
-                    this.elements.nextBtn.textContent = 'Next';
-                    this.elements.nextBtn.className = 'px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors';
-                }
+            // Made the function global so it can be accessed from inline HTML
+            window.handleAnswerSubmission = function(questionId, optionIndex) {
+                fetch(`/api/quiz/${quizId}/question/${questionId}/answer`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({selected_option: optionIndex})
+                });
             }
 
-            previousQuestion() {
-                if (this.currentQuestionIndex > 0) {
-                    this.showQuestion(this.currentQuestionIndex - 1);
-                }
-            }
-
-            nextQuestion() {
-                if (this.currentQuestionIndex === this.questions.length - 1) {
-                    this.submitQuiz();
-                } else {
-                    this.showQuestion(this.currentQuestionIndex + 1);
-                }
-            }
-
-            startTimer() {
-                this.timerInterval = setInterval(() => {
-                    this.timeLeft--;
-                    const minutes = Math.floor(this.timeLeft / 60);
-                    const seconds = this.timeLeft % 60;
-                    this.elements.timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            function startTimer() {
+                const timerDisplay = document.getElementById('time-display');
+                const timer = setInterval(() => {
+                    const minutes = Math.floor(timeRemaining / 60);
+                    const seconds = timeRemaining % 60;
+                    timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     
-                    if (this.timeLeft <= 0) {
-                        this.submitQuiz();
+                    if (timeRemaining <= 0) {
+                        clearInterval(timer);
+                        submitQuiz();
                     }
+                    timeRemaining--;
                 }, 1000);
             }
 
-            async submitQuiz() {
-                clearInterval(this.timerInterval);
-                try {
-                    const response = await fetch('/api/submit-quiz', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            answers: this.answers,
-                            timeSpent: this.timeLeft
-                        })
-                    });
-                    const result = await response.json();
-                    window.location.href = `/quiz-result/${result.attemptId}`;
-                } catch (error) {
-                    console.error('Error submitting quiz:', error);
-                }
+            function submitQuiz() {
+                fetch(`/api/quiz/${quizId}/submit`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
+                });
             }
-        }
 
-        // Initialize quiz when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            const quiz = new Quiz();
-            const quizId = new URLSearchParams(window.location.search).get('id');
-            if (quizId) {
-                quiz.loadQuiz(quizId);
-            }
+            // Add event listener for submit button
+            document.getElementById('submit-quiz').addEventListener('click', submitQuiz);
         });
     </script>
 </body>
