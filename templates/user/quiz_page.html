@@ -539,182 +539,207 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize variables
-            let timeRemaining = 3600; // 1 hour in seconds
-            const quizId = 1; // Sample quiz ID - replace with actual quiz ID
-            let questions = [];
-            let currentAnswers = {};
-            let currentQuestionIndex = 0;
-            let questionTimings = {}; // Store question timing data
-
-            // Load questions from database via API
-            fetch(`/api/quiz/${quizId}/questions`)
-                .then(response => response.json())
-                .then(data => {
-                    questions = data.questions;
-                    
-                    // Update quiz title if available
-                    if (data.title) {
-                        document.getElementById('quiz-title').textContent = data.title;
-                    } else {
-                        document.getElementById('quiz-title').textContent = "Quiz";
-                    }
-                    
-                    // Set total questions counts
-                    document.getElementById('total-questions').textContent = questions.length;
-                    document.getElementById('total-questions-counter').textContent = questions.length;
-                    
-                    // Render the UI
-                    renderCurrentQuestion();
-                    renderQuestionGrid();
-                    loadQuizState();
-                })
-                .catch(error => {
-                    console.error('Error loading quiz questions:', error);
-                    document.getElementById('question-text').textContent = 
-                        "There was an error loading the quiz. Please refresh the page or contact support.";
-                });
-            
-            // Start the timer
-            startTimer();
-
-            function renderCurrentQuestion() {
-                if (questions.length === 0) return; // No questions loaded yet
-                
-                const question = questions[currentQuestionIndex];
-                document.getElementById('current-question-num').textContent = currentQuestionIndex + 1;
-                document.getElementById('question-text').textContent = question.text;
-                
-                // Render options
-                const optionsContainer = document.getElementById('options-container');
-                optionsContainer.innerHTML = '';
-                
-                question.options.forEach((option, index) => {
-                    const optionItem = document.createElement('div');
-                    optionItem.className = 'option-item';
-                    
-                    // Check if this option is selected
-                    const isChecked = currentAnswers[question.id]?.selected_option === index;
-                    
-                    optionItem.innerHTML = `
-                        <input type="radio" id="option${index}" name="current-question" value="${index}" ${isChecked ? 'checked' : ''}>
-                        <label for="option${index}">${option.text}</label>
-                    `;
-                    
-                    optionsContainer.appendChild(optionItem);
-                    
-                    // Add event listener for option selection
-                    const radio = optionItem.querySelector('input[type="radio"]');
-                    radio.addEventListener('change', () => {
-                        handleAnswerSubmission(question.id, index);
-                    });
-                });
-            }
-
-            function renderQuestionGrid() {
-                if (questions.length === 0) return; // No questions loaded yet
-                
-                const grid = document.getElementById('question-grid');
-                grid.innerHTML = '';
-                
-                // Create a button for each question
-                for (let i = 0; i < questions.length; i++) {
-                    const button = document.createElement('button');
-                    button.className = 'question-number-btn';
-                    button.textContent = i + 1;
-                    
-                    // Add appropriate classes
-                    if (i === currentQuestionIndex) {
-                        button.classList.add('current');
-                    }
-                    
-                    // Check if this question is answered
-                    if (currentAnswers[questions[i].id]) {
-                        button.classList.add('answered');
-                    }
-                    
-                    button.addEventListener('click', () => {
-                        currentQuestionIndex = i;
-                        updateUI();
-                    });
-                    
-                    grid.appendChild(button);
-                }
-                
-                // Update counters
-                document.getElementById('questions-answered').textContent = 
-                    Object.keys(currentAnswers).length;
-            }
-
-            function handleAnswerSubmission(questionId, optionIndex) {
-                // Save answer locally
-                currentAnswers[questionId] = {
-                    selected_option: optionIndex
-                };
-                
-                // Send to API
-                fetch(`/api/quiz/${quizId}/question/${questionId}/answer`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({selected_option: optionIndex})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // If the API returns timing data, store it
-                    if (data.time_spent) {
-                        questionTimings[questionId] = data.time_spent;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error saving answer:', error);
-                });
-                
-                updateUI();
-            }
-
-            function recordQuestionViewTime(questionId) {
-                fetch(`/api/quiz/${quizId}/question/${questionId}/view`, {
-                    method: 'POST'
-                })
-                .catch(error => {
-                    console.error('Error recording question view time:', error);
-                });
-            }
-
-            function updateUI() {
-                renderCurrentQuestion();
-                renderQuestionGrid();
-                
-                // Record view time for the current question
-                if (questions.length > 0) {
-                    recordQuestionViewTime(questions[currentQuestionIndex].id);
-                }
-            }
-
-            function startTimer() {
-    const timerDisplay = document.getElementById('time-display');
-    const timerElement = document.getElementById('timer');
+    // Extract the quiz ID from the URL (assuming it's structured like /quiz/123)
+    const pathParts = window.location.pathname.split('/');
+    const quizId = pathParts[pathParts.indexOf('quiz') + 1];
     
-    // Get the remaining time from the server
-    fetch(`/api/quiz/${quizId}/state`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.time_remaining) {
-                timeRemaining = data.time_remaining;
+    // Initialize variables
+    let timeRemaining = 3600; // Default value until real data loads
+    let questions = [];
+    let currentAnswers = {};
+    let currentQuestionIndex = 0;
+    let questionTimings = {}; // Store question timing data
+    let quizData = null;
+
+    // Load questions from database via API
+    fetch(`/api/quiz/${quizId}/questions`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to load quiz: ${response.status} ${response.statusText}`);
             }
-            startCountdown();
+            return response.json();
+        })
+        .then(data => {
+            quizData = data;
+            
+            // Check if questions are available
+            if (!data.questions || !Array.isArray(data.questions)) {
+                throw new Error('No questions available for this quiz');
+            }
+            
+            questions = data.questions;
+            
+            // Update quiz title if available
+            if (data.title) {
+                document.getElementById('quiz-title').textContent = data.title;
+            } else {
+                document.getElementById('quiz-title').textContent = "Quiz";
+            }
+            
+            // Set total questions counts
+            document.getElementById('total-questions').textContent = questions.length;
+            document.getElementById('total-questions-counter').textContent = questions.length;
+            
+            // Render the UI
+            renderCurrentQuestion();
+            renderQuestionGrid();
+            loadQuizState();
         })
         .catch(error => {
-            console.error('Error getting time:', error);
-            startCountdown();
+            console.error('Error loading quiz questions:', error);
+            document.getElementById('question-text').textContent = 
+                "There was an error loading the quiz. Please refresh the page or contact support.";
         });
     
-    function startCountdown() {
+    // Load quiz state and start timer
+    function loadQuizState() {
+        fetch(`/api/quiz/${quizId}/state`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load quiz state: ${response.status} ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Store answers
+                if (data.answered_questions) {
+                    Object.keys(data.answered_questions).forEach(questionId => {
+                        const answerData = data.answered_questions[questionId];
+                        currentAnswers[questionId] = {
+                            selected_option: answerData.selected_option_id
+                        };
+                    });
+                }
+                
+                // Get the time remaining
+                if (data.time_remaining !== undefined) {
+                    timeRemaining = Math.max(0, data.time_remaining);
+                    startTimer();
+                }
+                
+                updateUI();
+            })
+            .catch(error => {
+                console.error('Error loading quiz state:', error);
+                startTimer(); // Still start timer with default value
+                updateUI();
+            });
+    }
+
+    function renderCurrentQuestion() {
+        if (!questions.length) return; // No questions loaded yet
+        
+        const question = questions[currentQuestionIndex];
+        document.getElementById('current-question-num').textContent = currentQuestionIndex + 1;
+        document.getElementById('question-text').textContent = question.text;
+        
+        // Render options
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+        
+        question.options.forEach((option, index) => {
+            const optionItem = document.createElement('div');
+            optionItem.className = 'option-item';
+            
+            // Check if this option is selected
+            const questionAnswer = currentAnswers[question.id];
+            const isChecked = questionAnswer && questionAnswer.selected_option === index;
+            
+            optionItem.innerHTML = `
+                <input type="radio" id="option${index}" name="current-question" value="${index}" ${isChecked ? 'checked' : ''}>
+                <label for="option${index}">${option.text}</label>
+            `;
+            
+            optionsContainer.appendChild(optionItem);
+            
+            // Add event listener for option selection
+            const radio = optionItem.querySelector('input[type="radio"]');
+            radio.addEventListener('change', () => {
+                handleAnswerSubmission(question.id, index);
+            });
+        });
+    }
+
+    function renderQuestionGrid() {
+        if (!questions.length) return; // No questions loaded yet
+        
+        const grid = document.getElementById('question-grid');
+        grid.innerHTML = '';
+        
+        // Create a button for each question
+        for (let i = 0; i < questions.length; i++) {
+            const button = document.createElement('button');
+            button.className = 'question-number-btn';
+            button.textContent = i + 1;
+            
+            // Add appropriate classes
+            if (i === currentQuestionIndex) {
+                button.classList.add('current');
+            }
+            
+            // Check if this question is answered
+            if (currentAnswers[questions[i].id]) {
+                button.classList.add('answered');
+            }
+            
+            button.addEventListener('click', () => {
+                currentQuestionIndex = i;
+                updateUI();
+            });
+            
+            grid.appendChild(button);
+        }
+        
+        // Update counters
+        document.getElementById('questions-answered').textContent = 
+            Object.keys(currentAnswers).length;
+    }
+
+    function handleAnswerSubmission(questionId, optionIndex) {
+        // Save answer locally
+        currentAnswers[questionId] = {
+            selected_option: optionIndex
+        };
+        
+        // Send to API
+        fetch(`/api/quiz/${quizId}/question/${questionId}/answer`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({selected_option: optionIndex})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error saving answer: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // If the API returns timing data, store it
+            if (data.time_spent) {
+                questionTimings[questionId] = data.time_spent;
+            }
+        })
+        .catch(error => {
+            console.error('Error saving answer:', error);
+            // Maybe show a notification to the user
+        });
+        
+        updateUI();
+    }
+
+    function updateUI() {
+        renderCurrentQuestion();
+        renderQuestionGrid();
+    }
+
+    function startTimer() {
+        const timerDisplay = document.getElementById('time-display');
+        const timerElement = document.getElementById('timer');
+        
         const timer = setInterval(() => {
             // Format time properly
             const minutes = Math.floor(timeRemaining / 60);
             const seconds = Math.floor(timeRemaining % 60);
-            // Use this more reliable formatting approach
             timerDisplay.textContent = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
             
             // Add warning class when time is running low (less than 5 minutes)
@@ -729,99 +754,70 @@
             timeRemaining--;
         }, 1000);
     }
-}
 
-            function loadQuizState() {
-                fetch(`/api/quiz/${quizId}/state`)
-                    .then(response => response.json())
-                    .then(data => {
-                        // Store answers
-                        if (data.answered_questions) {
-                            Object.keys(data.answered_questions).forEach(questionId => {
-                                currentAnswers[questionId] = {
-                                    selected_option: data.answered_questions[questionId].selected_option_id
-                                };
-                            });
-                        }
-                        
-                        // Load timing data if available
-                        return fetch(`/api/quiz/${quizId}/time-analysis`);
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.questionAnalysis) {
-                            data.questionAnalysis.forEach(item => {
-                                questionTimings[item.questionId] = item.timeSpentSeconds;
-                            });
-                        }
-                        updateUI();
-                    })
-                    .catch(error => {
-                        console.error('Error loading quiz state or timing data:', error);
-                        updateUI();
-                    });
+    function submitQuiz() {
+        fetch(`/api/quiz/${quizId}/submit`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error submitting quiz: ${response.status}`);
             }
-
-            function submitQuiz() {
-                fetch(`/api/quiz/${quizId}/submit`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.redirect_url) {
-                        window.location.href = data.redirect_url;
-                    } else {
-                        alert('Quiz submitted successfully!');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error submitting quiz:', error);
-                    alert('There was an error submitting your quiz. Please try again.');
-                });
+            return response.json();
+        })
+        .then(data => {
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Quiz submitted successfully!');
             }
-
-            // Add event listeners for navigation buttons
-            document.getElementById('prev-question').addEventListener('click', () => {
-                if (currentQuestionIndex > 0) {
-                    currentQuestionIndex--;
-                    updateUI();
-                }
-            });
-            
-            document.getElementById('next-question').addEventListener('click', () => {
-                if (currentQuestionIndex < questions.length - 1) {
-                    currentQuestionIndex++;
-                    updateUI();
-                }
-            });
-            
-            document.getElementById('clear-answer').addEventListener('click', () => {
-                if (questions.length === 0) return; // No questions loaded yet
-                
-                const currentQuestionId = questions[currentQuestionIndex].id;
-                if (currentAnswers[currentQuestionId]) {
-                    // Remove from local storage
-                    delete currentAnswers[currentQuestionId];
-                    
-                    // Send to API
-                    fetch(`/api/quiz/${quizId}/question/${currentQuestionId}/clear`, {
-                        method: 'POST'
-                    })
-                    .catch(error => {
-                        console.error('Error clearing answer:', error);
-                    });
-                    
-                    updateUI();
-                }
-            });
-            
-            document.getElementById('submit-quiz').addEventListener('click', () => {
-                // Confirm before submitting
-                if (confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')) {
-                    submitQuiz();
-                }
-            });
+        })
+        .catch(error => {
+            console.error('Error submitting quiz:', error);
+            alert('There was an error submitting your quiz. Please try again.');
         });
+    }
+
+    // Add event listeners for navigation buttons
+    document.getElementById('prev-question').addEventListener('click', () => {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            updateUI();
+        }
+    });
+    
+    document.getElementById('next-question').addEventListener('click', () => {
+        if (currentQuestionIndex < questions.length - 1) {
+            currentQuestionIndex++;
+            updateUI();
+        }
+    });
+    
+    document.getElementById('clear-answer').addEventListener('click', () => {
+        if (!questions.length) return; // No questions loaded yet
+        
+        const currentQuestionId = questions[currentQuestionIndex].id;
+        if (currentAnswers[currentQuestionId]) {
+            // Remove from local storage
+            delete currentAnswers[currentQuestionId];
+            updateUI();
+            
+            // Try to send to API if it exists
+            fetch(`/api/quiz/${quizId}/question/${currentQuestionId}/answer`, {
+                method: 'DELETE'
+            }).catch(error => {
+                console.error('Error clearing answer:', error);
+            });
+        }
+    });
+    
+    document.getElementById('submit-quiz').addEventListener('click', () => {
+        // Confirm before submitting
+        if (confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')) {
+            submitQuiz();
+        }
+    });
+});
     </script>
 </body>
 </html>

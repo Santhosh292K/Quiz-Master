@@ -704,6 +704,24 @@ def admin_summary():
     total_users = User.query.filter(User.is_admin == False).count()
     total_questions = Question.query.count()
     
+    # Quiz attempt statistics
+    total_attempts = QuizAttempt.query.count()
+    
+    # Calculate average score
+    avg_score_result = db.session.query(db.func.avg(QuizAttempt.score)).scalar()
+    average_score = avg_score_result if avg_score_result is not None else 0
+    
+    # Calculate average time taken (in minutes)
+    time_diff_expr = db.func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time) / 60
+    avg_time_result = db.session.query(
+        db.func.avg(time_diff_expr)
+    ).filter(QuizAttempt.end_time != None).scalar()
+    average_time = avg_time_result if avg_time_result is not None else 0
+    
+    # Calculate completion rate
+    completed_attempts = QuizAttempt.query.filter(QuizAttempt.end_time != None).count()
+    completion_rate = (completed_attempts / total_attempts * 100) if total_attempts > 0 else 0
+    
     # Subject-wise chapter count
     subjects = Subject.query.all()
     subject_data = []
@@ -785,6 +803,86 @@ def admin_summary():
         'quiz_count': item.quiz_count
     } for item in quiz_question_distribution]
     
+    # Quiz attempt analysis
+    quiz_attempts_query = db.session.query(
+        Quiz.id,
+        Quiz.quiz_id,
+        Subject.name.label('subject_name'),
+        Chapter.name.label('chapter_name'),
+        db.func.count(QuizAttempt.id).label('attempts'),
+        db.func.max(QuizAttempt.score).label('highest_score'),
+        db.func.avg(QuizAttempt.score).label('average_score'),
+        db.func.min(QuizAttempt.score).label('lowest_score'),
+        db.func.avg(db.func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time) / 60).label('average_time')
+    ).join(QuizAttempt, QuizAttempt.quiz_id == Quiz.id
+    ).join(Subject, Subject.id == Quiz.subject_id
+    ).join(Chapter, Chapter.id == Quiz.chapter_id
+    ).filter(QuizAttempt.end_time != None
+    ).group_by(Quiz.id, Subject.name, Chapter.name
+    ).order_by(db.func.count(QuizAttempt.id).desc()
+    ).all()
+    
+    quiz_attempts_data = [{
+        'quiz_id': quiz.quiz_id,
+        'subject_name': quiz.subject_name,
+        'chapter_name': quiz.chapter_name,
+        'attempts': quiz.attempts,
+        'highest_score': quiz.highest_score,
+        'average_score': quiz.average_score,
+        'lowest_score': quiz.lowest_score,
+        'average_time': quiz.average_time
+    } for quiz in quiz_attempts_query]
+    
+    # Score distribution
+    score_ranges = [
+        {'min_score': 0, 'max_score': 20},
+        {'min_score': 21, 'max_score': 40},
+        {'min_score': 41, 'max_score': 60},
+        {'min_score': 61, 'max_score': 80},
+        {'min_score': 81, 'max_score': 100}
+    ]
+    
+    score_distribution = []
+    for score_range in score_ranges:
+        count = QuizAttempt.query.filter(
+            QuizAttempt.score >= score_range['min_score'],
+            QuizAttempt.score <= score_range['max_score']
+        ).count()
+        if count > 0:
+            score_distribution.append({
+                'min_score': score_range['min_score'],
+                'max_score': score_range['max_score'],
+                'count': count
+            })
+    
+    # Time taken distribution
+    time_ranges = [
+        {'min_time': 0, 'max_time': 5},
+        {'min_time': 6, 'max_time': 10},
+        {'min_time': 11, 'max_time': 15},
+        {'min_time': 16, 'max_time': 20},
+        {'min_time': 21, 'max_time': 30},
+        {'min_time': 31, 'max_time': 60}
+    ]
+    
+    time_distribution = []
+    for time_range in time_ranges:
+        min_seconds = time_range['min_time'] * 60
+        max_seconds = time_range['max_time'] * 60
+        
+        count = db.session.query(QuizAttempt).filter(
+            db.func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time) >= min_seconds,
+            db.func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time) <= max_seconds,
+            QuizAttempt.end_time != None
+        ).count()
+        
+        if count > 0:
+            time_distribution.append({
+                'min_time': time_range['min_time'],
+                'max_time': time_range['max_time'],
+                'count': count
+            })
+    
     return render_template(
         'admin/summary.html',
         active_page='summary',
@@ -793,13 +891,19 @@ def admin_summary():
         total_quizzes=total_quizzes,
         total_users=total_users,
         total_questions=total_questions,
+        total_attempts=total_attempts,
+        average_score=average_score,
+        average_time=average_time,
+        completion_rate=completion_rate,
         subject_data=subject_data,
         quiz_monthly_data=quiz_monthly_data,
         chapters_by_subject=chapters_by_subject,
         active_chapters=active_chapters,
-        quiz_question_data=quiz_question_data
+        quiz_question_data=quiz_question_data,
+        quiz_attempts_data=quiz_attempts_data,
+        score_distribution=score_distribution,
+        time_distribution=time_distribution
     )
-
 @app.route('/user/quiz')
 @login_required
 def user_quiz():
@@ -1350,7 +1454,31 @@ def get_quiz_questions(quiz_id, quiz, attempt):
         'duration': quiz.duration,
         'attempt_id': attempt.id
     })
-
+# Additional route needed for clearing answers
+@app.route('/api/quiz/<int:quiz_id>/question/<int:question_id>/answer', methods=['DELETE'])
+@login_required
+@validate_quiz_attempt
+def clear_question_answer(quiz_id, question_id, quiz, attempt):
+    """Clear an answer for a specific question"""
+    if not attempt:
+        return jsonify({'error': 'No active quiz attempt'}), 404
+    
+    # Find and delete the question attempt
+    question_attempt = QuestionAttempt.query.filter_by(
+        quiz_attempt_id=attempt.id,
+        question_id=question_id
+    ).first()
+    
+    if question_attempt:
+        try:
+            db.session.delete(question_attempt)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': f'Failed to clear answer: {str(e)}'}), 500
+    
+    return jsonify({'success': True})  # Nothing to clear
 
 
 

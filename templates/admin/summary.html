@@ -67,6 +67,26 @@
             </div>
         </div>
         
+        <!-- Additional Summary Cards for Quiz Attempts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700">Total Attempts</h2>
+                <p class="text-4xl font-bold mt-2 text-indigo-600">{{ total_attempts }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700">Avg Score (%)</h2>
+                <p class="text-4xl font-bold mt-2 text-teal-600">{{ average_score|round(2) }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700">Avg Time (min)</h2>
+                <p class="text-4xl font-bold mt-2 text-orange-600">{{ average_time|round(1) }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700">Completion Rate</h2>
+                <p class="text-4xl font-bold mt-2 text-pink-600">{{ completion_rate|round(1) }}%</p>
+            </div>
+        </div>
+        
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <!-- Monthly Quiz Creation -->
@@ -93,6 +113,55 @@
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Question Distribution</h2>
                 <canvas id="questionDistributionChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Score Distribution -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Score Distribution</h2>
+                <canvas id="scoreDistributionChart" height="250"></canvas>
+            </div>
+            
+            <!-- Time Taken Distribution -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Time Taken Distribution</h2>
+                <canvas id="timeDistributionChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <!-- Quiz Attempt Analysis Table -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Quiz Attempt Analysis</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Quiz ID</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subject</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Chapter</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Attempts</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Highest Score</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Average Score</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lowest Score</th>
+                            <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg Time (min)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for quiz in quiz_attempts_data %}
+                        <tr>
+                            <td class="py-2 px-4 border-b border-gray-200">{{ quiz.quiz_id }}</td>
+                            <td class="py-2 px-4 border-b border-gray-200">{{ quiz.subject_name }}</td>
+                            <td class="py-2 px-4 border-b border-gray-200">{{ quiz.chapter_name }}</td>
+                            <td class="py-2 px-4 border-b border-gray-200">{{ quiz.attempts }}</td>
+                            <td class="py-2 px-4 border-b border-gray-200 font-semibold text-green-600">{{ quiz.highest_score|round(1) }}%</td>
+                            <td class="py-2 px-4 border-b border-gray-200">{{ quiz.average_score|round(1) }}%</td>
+                            <td class="py-2 px-4 border-b border-gray-200 font-semibold text-red-600">{{ quiz.lowest_score|round(1) }}%</td>
+                            <td class="py-2 px-4 border-b border-gray-200">{{ quiz.average_time|round(1) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
         
@@ -259,6 +328,60 @@
                                         questionDistData[context.dataIndex].question_count
                                     } ${questionDistData[context.dataIndex].question_count === 1 ? 'question' : 'questions'}`;
                                 }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Score Distribution Chart
+            const scoreDistData = {{ score_distribution|tojson }};
+            new Chart(document.getElementById('scoreDistributionChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: scoreDistData.map(item => `${item.min_score}-${item.max_score}%`),
+                    datasets: [{
+                        label: 'Number of Attempts',
+                        data: scoreDistData.map(item => item.count),
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Time Taken Distribution Chart
+            const timeDistData = {{ time_distribution|tojson }};
+            new Chart(document.getElementById('timeDistributionChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: timeDistData.map(item => `${item.min_time}-${item.max_time} min`),
+                    datasets: [{
+                        label: 'Number of Attempts',
+                        data: timeDistData.map(item => item.count),
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
                             }
                         }
                     }
