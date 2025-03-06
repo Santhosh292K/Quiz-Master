@@ -6,28 +6,26 @@
     <title>Available Quizzes</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="/static/navbar.css" rel="stylesheet">
-    <link href="/static/quiz_listing.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/quiz_listing.css">
+    <link rel="stylesheet" href="/static/user_navbar.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div style="font-size: 150%;color: white;font-weight: bold;">
+            <div class="brand">
+                <i class="fas fa-graduation-cap"></i>
                 Quiz Master
             </div>
             <div class="nav-links">
                 <a href="{{ url_for('user_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
-                    Dashboard
+                    <i class="fas fa-th-large"></i> Dashboard
                 </a>
-                
-                <a href="{{ url_for('user_quiz') }}" {% if active_page == 'user_quiz' %}class="active"{% endif %}>
-                    Quiz
+                <a href="{{ url_for('user_quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
+                    <i class="fas fa-question-circle"></i> Quiz
                 </a>
-                
-                <a href="{{ url_for('user_summary') }}" {% if active_page == 'user_summary' %}class="active"{% endif %}>
-                    Summary
+                <a href="{{ url_for('user_summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
+                    <i class="fas fa-chart-bar"></i> Summary
                 </a>
-
                 <div class="user-profile">
                     <div class="user-avatar">
                         {{ current_user.full_name[:1].upper() }}
@@ -36,10 +34,10 @@
                     <span class="dropdown-arrow"></span>
                     <div class="profile-dropdown">
                         <a href="{{ url_for('profile') }}">
-                            Profile Settings
+                            <i class="fas fa-user-cog me-2"></i> Profile Settings
                         </a>
                         <a href="{{ url_for('logout') }}">
-                            Logout
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
                         </a>
                     </div>
                 </div>
@@ -47,20 +45,28 @@
         </div>
     </nav>
 
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3">Available Quizzes</h1>
-            <div>
-                <span class="badge bg-success me-2">Open</span>
-                <span class="badge bg-secondary me-2">Closed</span>
-                <span id="totalQuizCount" class="badge bg-primary">0 Quizzes</span>
+    <div class="container">
+        <div class="section-header">
+            <h1 class="header-title">Available Quizzes</h1>
+            <div class="quiz-stats">
+                <div class="stats-badge badge-success">
+                    <i class="fas fa-check-circle"></i> Open
+                </div>
+                <div class="stats-badge badge-secondary">
+                    <i class="fas fa-lock"></i> Closed
+                </div>
+                <div id="totalQuizCount" class="stats-badge badge-primary">
+                    <i class="fas fa-list"></i> 0 Quizzes
+                </div>
             </div>
         </div>
 
         <div class="filter-section">
             <div class="row">
                 <div class="col-md-4 mb-3 mb-md-0">
-                    <label for="subjectFilter" class="form-label">Filter by Subject</label>
+                    <label for="subjectFilter" class="form-label">
+                        <i class="fas fa-book-open me-2"></i>Filter by Subject
+                    </label>
                     <select id="subjectFilter" class="form-select">
                         <option value="all">All Subjects</option>
                         {% for subject in subjects %}
@@ -69,13 +75,17 @@
                     </select>
                 </div>
                 <div class="col-md-4 mb-3 mb-md-0">
-                    <label for="chapterFilter" class="form-label">Filter by Chapter</label>
+                    <label for="chapterFilter" class="form-label">
+                        <i class="fas fa-bookmark me-2"></i>Filter by Chapter
+                    </label>
                     <select id="chapterFilter" class="form-select" disabled>
                         <option value="all">All Chapters</option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="statusFilter" class="form-label">Filter by Status</label>
+                    <label for="statusFilter" class="form-label">
+                        <i class="fas fa-filter me-2"></i>Filter by Status
+                    </label>
                     <select id="statusFilter" class="form-select">
                         <option value="all">All Quizzes</option>
                         <option value="open">Open Quizzes</option>
@@ -87,13 +97,19 @@
 
         <ul class="nav nav-pills mb-3" id="quizTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#all-quizzes" type="button" role="tab" aria-controls="all-quizzes" aria-selected="true">All Quizzes</button>
+                <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#all-quizzes" type="button" role="tab" aria-controls="all-quizzes" aria-selected="true">
+                    <i class="fas fa-list me-2"></i>All Quizzes
+                </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="open-tab" data-bs-toggle="pill" data-bs-target="#open-quizzes" type="button" role="tab" aria-controls="open-quizzes" aria-selected="false">Open Quizzes</button>
+                <button class="nav-link" id="open-tab" data-bs-toggle="pill" data-bs-target="#open-quizzes" type="button" role="tab" aria-controls="open-quizzes" aria-selected="false">
+                    <i class="fas fa-unlock me-2"></i>Open Quizzes
+                </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="closed-tab" data-bs-toggle="pill" data-bs-target="#closed-quizzes" type="button" role="tab" aria-controls="closed-quizzes" aria-selected="false">Closed Quizzes</button>
+                <button class="nav-link" id="closed-tab" data-bs-toggle="pill" data-bs-target="#closed-quizzes" type="button" role="tab" aria-controls="closed-quizzes" aria-selected="false">
+                    <i class="fas fa-lock me-2"></i>Closed Quizzes
+                </button>
             </li>
         </ul>
 
@@ -245,7 +261,7 @@
                 closedContainer.innerHTML = '';
                 
                 // Update total count
-                totalQuizCount.textContent = `${filteredQuizzes.length} Quiz${filteredQuizzes.length === 1 ? '' : 'zes'}`;
+                totalQuizCount.innerHTML = `<i class="fas fa-list"></i> ${filteredQuizzes.length} Quiz${filteredQuizzes.length === 1 ? '' : 'zes'}`;
                 
                 // Fill containers with filtered quizzes
                 const openQuizzes = filteredQuizzes.filter(quiz => quiz.status === 'open');
@@ -270,10 +286,12 @@
                     closedEmpty.classList.add('d-none');
                 }
                 
-                // Render quizzes
-                filteredQuizzes.forEach(quiz => {
+                // Render quizzes with animation delay for staggered effect
+                filteredQuizzes.forEach((quiz, index) => {
                     // Add to all quizzes tab
-                    allContainer.appendChild(createQuizCard(quiz));
+                    const card = createQuizCard(quiz);
+                    card.style.animationDelay = `${index * 0.05}s`;
+                    allContainer.appendChild(card);
                     
                     // Add to appropriate status tab
                     if (quiz.status === 'open') {
@@ -289,36 +307,45 @@
                 const col = document.createElement('div');
                 col.className = 'col-md-6 col-lg-4';
                 
-                const card = document.createElement('div');
-                card.className = `card h-100 ${quiz.status === 'closed' ? 'closed-quiz' : ''}`;
-                
-                // Add status badge
+                const statusClass = quiz.status === 'closed' ? 'closed-quiz' : '';
                 const badgeColor = quiz.status === 'open' ? 'success' : 'secondary';
+                const badgeIcon = quiz.status === 'open' ? 'fa-check-circle' : 'fa-lock';
                 const badgeText = quiz.status === 'open' ? 'Open' : 'Closed';
-                card.innerHTML = `
-                    <div class="quiz-badge">
-                        <span class="badge bg-${badgeColor}">${badgeText}</span>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">${quiz.title}</h5>
-                        <div class="quiz-info mb-3">
-                            <div><i class="fas fa-book me-2"></i>${quiz.subjectName}</div>
-                            <div><i class="fas fa-bookmark me-2"></i>${quiz.chapterName}</div>
-                            <div><i class="fas fa-calendar-alt me-2"></i>${formatDate(quiz.date)}</div>
-                            <div><i class="fas fa-clock me-2"></i>${quiz.duration} minutes</div>
-                            <div><i class="fas fa-question-circle me-2"></i>${quiz.questionCount} questions</div>
+                
+                col.innerHTML = `
+                    <div class="card h-100 ${statusClass}">
+                        <div class="quiz-badge">
+                            <span class="badge bg-${badgeColor}">
+                                <i class="fas ${badgeIcon} me-1"></i> ${badgeText}
+                            </span>
                         </div>
-                        <div class="quiz-footer">
-    ${quiz.status === 'open' ? 
-        `<a href="/quiz/${quiz.id}/start" class="btn btn-primary">Start Quiz</a>` : 
-        `<button class="btn btn-secondary" disabled>Quiz Closed</button>`
-    }
-    <span class="badge bg-light text-dark">${formatTimeLeft(quiz.date, quiz.status)}</span>
-</div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">${quiz.title}</h5>
+                            <div class="quiz-info">
+                                <div><i class="fas fa-book"></i>${quiz.subjectName}</div>
+                                <div><i class="fas fa-bookmark"></i>${quiz.chapterName}</div>
+                                <div><i class="fas fa-calendar-alt"></i>${formatDate(quiz.date)}</div>
+                                <div><i class="fas fa-clock"></i>${quiz.duration} minutes</div>
+                                <div><i class="fas fa-question-circle"></i>${quiz.questionCount} questions</div>
+                            </div>
+                            <div class="quiz-footer">
+                                ${quiz.status === 'open' ? 
+                                    `<a href="/quiz/${quiz.id}/start" class="btn btn-primary">
+                                        <i class="fas fa-play me-2"></i>Start Quiz
+                                    </a>` : 
+                                    `<button class="btn btn-secondary" disabled>
+                                        <i class="fas fa-lock me-2"></i>Quiz Closed
+                                    </button>`
+                                }
+                                <div class="time-badge">
+                                    <i class="fas ${quiz.status === 'open' ? 'fa-hourglass-half' : 'fa-history'}"></i>
+                                    ${formatTimeLeft(quiz.date, quiz.status)}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
                 
-                col.appendChild(card);
                 return col;
             }
 
@@ -370,6 +397,20 @@
                     }
                 }
             }
+            
+            // Enable user profile dropdown on click
+            const userProfile = document.querySelector('.user-profile');
+            userProfile.addEventListener('click', function() {
+                const dropdown = this.querySelector('.profile-dropdown');
+                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!userProfile.contains(event.target)) {
+                    userProfile.querySelector('.profile-dropdown').style.display = 'none';
+                }
+            });
         });
     </script>
 </body>

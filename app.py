@@ -1400,7 +1400,6 @@ def answer_question(quiz_id, question_id, quiz, attempt):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to save answer'}), 500
-
 @app.route('/api/quiz/<int:quiz_id>/submit', methods=['POST'])
 @login_required
 @validate_quiz_attempt
@@ -1409,29 +1408,64 @@ def submit_quiz(quiz_id, quiz, attempt):
     if not attempt:
         return jsonify({'error': 'No active quiz attempt'}), 404
     
-    # Calculate score
-    question_attempts = QuestionAttempt.query.filter_by(
-        quiz_attempt_id=attempt.id
-    ).all()
-    
-    total_questions = len(quiz.questions)
-    correct_answers = sum(1 for qa in question_attempts if qa.is_correct)
-    
-    # Record final score and end time
-    attempt.score = (correct_answers / total_questions) * 100
-    attempt.end_time = datetime.utcnow()
-    
     try:
+        # First, let's check if this attempt is already completed
+        if attempt.end_time is not None:
+            return jsonify({'error': 'This quiz attempt has already been submitted'}), 400
+        
+        # Calculate score
+        question_attempts = QuestionAttempt.query.filter_by(
+            quiz_attempt_id=attempt.id
+        ).all()
+        
+        total_questions = len(quiz.questions)
+        if total_questions == 0:
+            return jsonify({'error': 'Invalid quiz: no questions found'}), 400
+            
+        correct_answers = sum(1 for qa in question_attempts if qa.is_correct)
+        
+        # Record final score and end time
+        attempt.score = (correct_answers / total_questions) * 100
+        attempt.end_time = datetime.utcnow()
+        
+        # Commit this change first to ensure the current attempt is saved
         db.session.commit()
+        
+        # Now, in a separate transaction, handle previous attempts
+        try:
+            # Find previous completed attempts (excluding the one we just saved)
+            previous_attempts = QuizAttempt.query.filter(
+                QuizAttempt.user_id == attempt.user_id,
+                QuizAttempt.quiz_id == quiz_id,
+                QuizAttempt.id != attempt.id,
+                QuizAttempt.end_time.isnot(None)
+            ).all()
+            
+            if previous_attempts:
+                for prev_attempt in previous_attempts:
+                    # Instead of deleting, we could mark them as archived
+                    # or just leave them if deletion is causing issues
+                    db.session.delete(prev_attempt)
+                db.session.commit()
+        except Exception as inner_e:
+            # If there's an error cleaning up old attempts, log it but don't fail the submission
+            db.session.rollback()
+            app.logger.error(f"Error cleaning up previous attempts: {str(inner_e)}")
+            # Continue with the success response since the current attempt was saved
+        
         return jsonify({
             'attempt_id': attempt.id,
             'score': attempt.score,
             'redirect_url': url_for('quiz_result', attempt_id=attempt.id)
         })
+        
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Failed to submit quiz'}), 500
-
+        app.logger.error(f"Error submitting quiz: {str(e)}")
+        # Include the traceback for more detailed error information
+        import traceback
+        app.logger.error(traceback.format_exc())
+        return jsonify({'error': 'Failed to submit quiz. Please contact support.'}), 500
 @app.route('/quiz/result/<int:attempt_id>')
 @login_required
 def quiz_result(attempt_id):
@@ -1469,10 +1503,10 @@ def quiz_result(attempt_id):
     return render_template(
         'user/quiz_result.html',
         attempt=attempt,
+        quiz=attempt.quiz,  # Add this line
         question_results=question_results,
         total_time=(attempt.end_time - attempt.start_time).total_seconds()
     )
-
 
 @app.route('/api/quiz/<int:quiz_id>/questions')
 @login_required

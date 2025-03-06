@@ -5,259 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Management - Quiz Master</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="/static/navbar.css" rel="stylesheet">
-    <style>
-        .quiz-container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .quiz-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .quiz-title {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .select-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: #4a90e2;
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
-            outline: none;
-        }
-
-        .form-control.error {
-            border-color: #dc3545;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background-color: #4a90e2;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #357abd;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background-color: #c82333;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            overflow-y: auto;
-            padding: 2rem 1rem;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .quiz-list {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .quiz-card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 1.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        .quiz-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .quiz-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .quiz-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .quiz-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .step-indicator {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 2rem;
-        }
-
-        .step {
-            padding: 0.5rem 1.5rem;
-            margin: 0 1rem;
-            background: #e2e8f0;
-            border-radius: 20px;
-            color: #4a5568;
-            transition: all 0.3s ease;
-        }
-
-        .step.active {
-            background: #4a90e2;
-            color: white;
-        }
-
-        .question-container {
-            background: #f8fafc;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            border: 1px solid #e2e8f0;
-        }
-
-        .question-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .option-container {
-            margin: 1rem 0;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .explanation-field {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f7fafc;
-            border-radius: 8px;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 2rem;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #4a5568;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-    </style>
+    <link href="/static/admin_quiz.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div style="font-size: 150%;color: white;font-weight: bold;">
+            <div class="brand">
+                <i class="fas fa-graduation-cap"></i>
                 Quiz Master Admin
             </div>
             <div class="nav-links">
                 <a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
-                    Dashboard
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
                 <a href="{{ url_for('admin_quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
-                    Quiz
+                    <i class="fas fa-question-circle"></i> Quiz
                 </a>
                 <a href="{{ url_for('users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
-                    Users
+                    <i class="fas fa-users"></i> Users
                 </a>
                 <a href="{{ url_for('admin_summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
-                    Summary
+                    <i class="fas fa-chart-bar"></i> Summary
                 </a>
                 <a href="{{ url_for('logout') }}" class="logout-btn">
-                    Logout
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </div>
         </div>
     </nav>
     <div class="quiz-container">
         <div class="quiz-header">
-            <h2 class="quiz-title">Quiz Management</h2>
+            <h2 class="quiz-title"><i class="fas fa-tasks"></i> Quiz Management</h2>
             <button id="createQuizBtn" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create New Quiz
             </button>
@@ -266,8 +46,8 @@
         <div id="quizModal" class="modal">
             <div class="modal-content">
                 <div class="step-indicator">
-                    <div class="step active" id="stepDetails">1. Quiz Details</div>
-                    <div class="step" id="stepQuestions">2. Questions</div>
+                    <div class="step active" id="stepDetails"><i class="fas fa-info-circle"></i> 1. Quiz Details</div>
+                    <div class="step" id="stepQuestions"><i class="fas fa-question"></i> 2. Questions</div>
                 </div>
 
                 <form id="quizForm" class="quiz-form">
@@ -275,7 +55,7 @@
                         <h3 class="section-title">Quiz Details</h3>
                         <div class="form-group">
                             <label class="form-label" for="quizTitle">Quiz Title</label>
-                            <input type="text" id="quizTitle" class="form-control" required>
+                            <input type="text" id="quizTitle" class="form-control" placeholder="Enter quiz title" required>
                         </div>
 
                         <div class="select-group">
@@ -302,7 +82,7 @@
 
                             <div class="form-group">
                                 <label class="form-label" for="quizDuration">Duration (minutes)</label>
-                                <input type="number" id="quizDuration" class="form-control" min="1" required>
+                                <input type="number" id="quizDuration" class="form-control" min="1" placeholder="Duration in minutes" required>
                             </div>
                         </div>
 
@@ -335,6 +115,7 @@
     </div>
 
     <script>
+        // JavaScript remains the same as in your original code
         let editingQuizId = null;
 
         function showQuizDetails() {
@@ -382,7 +163,7 @@
             
             questionDiv.innerHTML = `
                 <div class="question-header">
-                    <h4>Question ${questionIndex}</h4>
+                    <h4><i class="fas fa-question-circle"></i> Question ${questionIndex}</h4>
                     <button type="button" class="btn btn-danger" onclick="this.closest('.question-container').remove()">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -390,7 +171,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">Question Text</label>
-                    <input type="text" class="form-control question-text" value="${questionData ? questionData.question_text : ''}" required>
+                    <input type="text" class="form-control question-text" placeholder="Enter your question here" value="${questionData ? questionData.question_text : ''}" required>
                 </div>
                 
                 <div class="options-container">
@@ -398,7 +179,7 @@
                         <div class="option-container">
                             <div class="form-group">
                                 <label class="form-label">Option ${i + 1}</label>
-                                <input type="text" class="form-control option-text" value="${questionData?.options[i]?.option_text || ''}" required>
+                                <input type="text" class="form-control option-text" placeholder="Enter option ${i + 1}" value="${questionData?.options[i]?.option_text || ''}" required>
                             </div>
                             <div class="form-group">
                                 <input type="radio" name="correct_${questionIndex}" value="${i}" ${questionData?.correct_option_index === i ? 'checked' : ''} required>
@@ -409,8 +190,8 @@
                 </div>
 
                 <div class="form-group explanation-field">
-                    <label class="form-label">Explanation for Correct Answer</label>
-                    <textarea class="form-control answer-explanation" rows="3" required>${questionData?.explanation || ''}</textarea>
+                    <label class="form-label"><i class="fas fa-info-circle"></i> Explanation for Correct Answer</label>
+                    <textarea class="form-control answer-explanation" rows="3" placeholder="Explain why the correct answer is right" required>${questionData?.explanation || ''}</textarea>
                 </div>
             `;
             
@@ -429,7 +210,7 @@
                 quizList.innerHTML = '';
                 
                 if (quizzes.length === 0) {
-                    quizList.innerHTML = '<div class="text-center p-4">No quizzes found</div>';
+                    quizList.innerHTML = '<div class="text-center p-4">No quizzes found. Create your first quiz!</div>';
                     return;
                 }
                 
@@ -438,7 +219,7 @@
                     quizCard.className = 'quiz-card';
                     quizCard.innerHTML = `
                         <div class="quiz-card-header">
-                            <h3>${quiz.quiz_id || 'Untitled Quiz'}</h3>
+                            <h3><i class="fas fa-file-alt"></i> ${quiz.quiz_id || 'Untitled Quiz'}</h3>
                             <div class="quiz-actions">
                                 <button class="btn btn-secondary" onclick="editQuiz(${quiz.id})">
                                     <i class="fas fa-edit"></i> Edit
@@ -450,12 +231,15 @@
                         </div>
                         <div class="quiz-info">
                             <div>
+                                <i class="far fa-calendar-alt"></i>
                                 <strong>Date:</strong> ${new Date(quiz.date).toLocaleDateString()}
                             </div>
                             <div>
+                                <i class="far fa-clock"></i>
                                 <strong>Duration:</strong> ${quiz.duration} minutes
                             </div>
                             <div>
+                                <i class="fas fa-tasks"></i>
                                 <strong>Questions:</strong> ${quiz.questions.length}
                             </div>
                         </div>
@@ -522,7 +306,7 @@
                 const quiz = await response.json();
                 
                 editingQuizId = quizId;
-                document.getElementById('quizTitle').value = quiz.quiz_id;  // This matches the backend's response
+                document.getElementById('quizTitle').value = quiz.quiz_id;
                 document.getElementById('subject-select').value = quiz.subject_id;
                 await loadChapters(quiz.subject_id);
                 document.getElementById('chapter-select').value = quiz.chapter_id;
@@ -541,30 +325,30 @@
         }
 
         function deleteQuiz(quizId) {
-    if (confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
-        fetch(`/admin/quiz/${quizId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
+            if (confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
+                fetch(`/admin/quiz/${quizId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Network response was not ok');
+                })
+                .then(data => {
+                    alert('Quiz deleted successfully');
+                    // Refresh the page or update the UI
+                    loadQuizzes();
+                })
+                .catch(error => {
+                    console.error('Error deleting quiz:', error);
+                    alert('Failed to delete quiz. Please try again.');
+                });
             }
-            throw new Error('Network response was not ok');
-        })
-        .then(data => {
-            alert('Quiz deleted successfully');
-            // Refresh the page or update the UI
-            window.location.reload();
-        })
-        .catch(error => {
-            console.error('Error deleting quiz:', error);
-            alert('Failed to delete quiz. Please try again.');
-        });
-    }
-}
+        }
 
         function collectQuizData() {
             const formData = {
@@ -681,7 +465,7 @@
             editingQuizId = null;
         }
 
-        // Event Listeners - SINGLE PLACE FOR ALL EVENT LISTENERS
+        // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             loadQuizzes();
             loadSubjects();

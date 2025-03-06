@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Management - Quiz Master</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="/static/navbar.css" rel="stylesheet">
     <style>
         .users-container {
@@ -138,24 +139,25 @@
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div style="font-size: 150%;color: white;font-weight: bold;">
+            <div class="brand">
+                <i class="fas fa-graduation-cap"></i>
                 Quiz Master Admin
             </div>
             <div class="nav-links">
                 <a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
-                    Dashboard
+                    <i class="fas fa-th-large"></i> Dashboard
                 </a>
                 <a href="{{ url_for('admin_quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
-                    Quiz
+                    <i class="fas fa-question-circle"></i> Quiz
                 </a>
                 <a href="{{ url_for('users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
-                    Users
+                    <i class="fas fa-users"></i> Users
                 </a>
                 <a href="{{ url_for('admin_summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
-                    Summary
+                    <i class="fas fa-chart-bar"></i> Summary
                 </a>
                 <a href="{{ url_for('logout') }}" class="logout-btn">
-                    Logout
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </div>
         </div>

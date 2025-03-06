@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Performance Summary</title>
+    <title>Summary</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
-    <link href="/static/navbar.css" rel="stylesheet">
+    <link href="/static/user_navbar.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         .dashboard-container {
             padding: 20px;
@@ -115,22 +117,20 @@
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div style="font-size: 150%;color: white;font-weight: bold;">
+            <div class="brand">
+                <i class="fas fa-graduation-cap"></i>
                 Quiz Master
             </div>
             <div class="nav-links">
                 <a href="{{ url_for('user_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
-                    Dashboard
+                    <i class="fas fa-th-large"></i> Dashboard
                 </a>
-                
-                <a href="{{ url_for('user_quiz') }}" {% if active_page == 'user_quiz' %}class="active"{% endif %}>
-                    Quiz
+                <a href="{{ url_for('user_quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
+                    <i class="fas fa-question-circle"></i> Quiz
                 </a>
-                
-                <a href="{{ url_for('user_summary') }}" {% if active_page == 'user_summary' %}class="active"{% endif %}>
-                    Summary
+                <a href="{{ url_for('user_summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
+                    <i class="fas fa-chart-bar"></i> Summary
                 </a>
-
                 <div class="user-profile">
                     <div class="user-avatar">
                         {{ current_user.full_name[:1].upper() }}
@@ -139,10 +139,10 @@
                     <span class="dropdown-arrow"></span>
                     <div class="profile-dropdown">
                         <a href="{{ url_for('profile') }}">
-                            Profile Settings
+                            <i class="fas fa-user-cog me-2"></i> Profile Settings
                         </a>
                         <a href="{{ url_for('logout') }}">
-                            Logout
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
                         </a>
                     </div>
                 </div>

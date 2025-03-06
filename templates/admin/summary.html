@@ -5,35 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - System Summary</title>
     <link href="/static/navbar.css" rel="stylesheet">
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100">
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
-            <div style="font-size: 150%;color: white;font-weight: bold;">
+            <div class="brand">
+                <i class="fas fa-graduation-cap"></i>
                 Quiz Master Admin
             </div>
             <div class="nav-links">
                 <a href="{{ url_for('admin_dashboard') }}" {% if active_page == 'home' %}class="active"{% endif %}>
-                    Dashboard
+                    <i class="fas fa-th-large"></i> Dashboard
                 </a>
                 <a href="{{ url_for('admin_quiz') }}" {% if active_page == 'quiz' %}class="active"{% endif %}>
-                    Quiz
+                    <i class="fas fa-question-circle"></i> Quiz
                 </a>
                 <a href="{{ url_for('users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
-                    Users
+                    <i class="fas fa-users"></i> Users
                 </a>
                 <a href="{{ url_for('admin_summary') }}" {% if active_page == 'summary' %}class="active"{% endif %}>
-                    Summary
+                    <i class="fas fa-chart-bar"></i> Summary
                 </a>
                 <a href="{{ url_for('logout') }}" class="logout-btn">
-                    Logout
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </div>
         </div>
