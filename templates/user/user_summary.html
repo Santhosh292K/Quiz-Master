@@ -98,6 +98,13 @@
             color: #991b1b;
         }
 
+        .no-data-message {
+            text-align: center;
+            padding: 30px;
+            color: #6b7280;
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             .chart-row {
                 grid-template-columns: 1fr;
@@ -165,68 +172,159 @@
         <div class="chart-row">
             <div class="chart-container">
                 <h3>Performance by Subject</h3>
-                <canvas id="subjectPerformanceChart"></canvas>
+                <div id="subjectPerformanceContainer">
+                    <canvas id="subjectPerformanceChart"></canvas>
+                </div>
             </div>
             <div class="chart-container">
                 <h3>Daily Activity</h3>
-                <canvas id="dailyActivityChart"></canvas>
+                <div id="dailyActivityContainer">
+                    <canvas id="dailyActivityChart"></canvas>
+                </div>
             </div>
         </div>
 
         <div class="chart-row">
             <div class="chart-container">
                 <h3>Time Distribution by Chapter</h3>
-                <canvas id="chapterTimeChart"></canvas>
+                <div id="chapterTimeContainer">
+                    <canvas id="chapterTimeChart"></canvas>
+                </div>
             </div>
             <div class="chart-container">
                 <h3>Score Trends</h3>
-                <canvas id="scoreTrendChart"></canvas>
+                <div id="scoreTrendContainer">
+                    <canvas id="scoreTrendChart"></canvas>
+                </div>
             </div>
         </div>
 
         <div class="chart-container">
             <h3>Recent Quiz Performance</h3>
-            <table class="performance-table">
-                <thead>
-                    <tr>
-                        <th>Quiz Date</th>
-                        <th>Subject</th>
-                        <th>Chapter</th>
-                        <th>Score</th>
-                        <th>Time Taken</th>
-                        <th>Questions</th>
-                    </tr>
-                </thead>
-                <tbody id="quizPerformanceBody">
-                </tbody>
-            </table>
+            <div id="recentQuizzesContainer">
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>Quiz Date</th>
+                            <th>Subject</th>
+                            <th>Chapter</th>
+                            <th>Score</th>
+                            <th>Time Taken</th>
+                            <th>Questions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quizPerformanceBody">
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
         // Fetch and display user statistics
-        async function fetchUserStats() {
-            try {
-                const response = await fetch('/api/user/statistics');
-                const data = await response.json();
-                
-                // Update summary statistics
-                document.getElementById('totalQuizzes').textContent = data.totalQuizzes;
-                document.getElementById('averageScore').textContent = `${data.averageScore}%`;
-                document.getElementById('totalTime').textContent = `${data.totalTimeHours}h`;
-                document.getElementById('subjectsCovered').textContent = data.subjectsCovered;
+        // Fetch and display user statistics
+async function fetchUserStats() {
+    try {
+        // Show loading indicators first
+        document.getElementById('totalQuizzes').textContent = "Loading...";
+        document.getElementById('averageScore').textContent = "Loading...";
+        document.getElementById('totalTime').textContent = "Loading...";
+        document.getElementById('subjectsCovered').textContent = "Loading...";
+        
+        const response = await fetch('/api/user/statistics');
+        
+        // Check if the response is OK
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update summary statistics
+        document.getElementById('totalQuizzes').textContent = data.totalQuizzes;
+        document.getElementById('averageScore').textContent = `${data.averageScore}%`;
+        document.getElementById('totalTime').textContent = `${data.totalTimeHours}h`;
+        document.getElementById('subjectsCovered').textContent = data.subjectsCovered;
 
-                // Create charts
-                createSubjectPerformanceChart(data.subjectPerformance);
-                createDailyActivityChart(data.dailyActivity);
-                createChapterTimeChart(data.chapterTime);
-                createScoreTrendChart(data.scoretrends);
-                
-                // Populate recent quiz table
-                populateQuizTable(data.recentQuizzes);
-            } catch (error) {
-                console.error('Error fetching user statistics:', error);
-            }
+        // Create charts - check for empty arrays first
+        if (data.subjectPerformance && data.subjectPerformance.length > 0) {
+            createSubjectPerformanceChart(data.subjectPerformance);
+        } else {
+            showNoDataMessage('subjectPerformanceContainer', 'No subject performance data available');
+        }
+        
+        if (data.dailyActivity && data.dailyActivity.length > 0) {
+            createDailyActivityChart(data.dailyActivity);
+        } else {
+            showNoDataMessage('dailyActivityContainer', 'No daily activity data available');
+        }
+        
+        if (data.chapterTime && data.chapterTime.length > 0) {
+            createChapterTimeChart(data.chapterTime);
+        } else {
+            showNoDataMessage('chapterTimeContainer', 'No chapter time data available');
+        }
+        
+        if (data.scoretrends && data.scoretrends.length > 0) {
+            createScoreTrendChart(data.scoretrends);
+        } else {
+            showNoDataMessage('scoreTrendContainer', 'No score trend data available');
+        }
+        
+        // Populate recent quiz table
+        if (data.recentQuizzes && data.recentQuizzes.length > 0) {
+            populateQuizTable(data.recentQuizzes);
+        } else {
+            document.getElementById('recentQuizzesContainer').innerHTML = 
+                '<div class="no-data-message">No recent quiz data available</div>';
+        }
+    } catch (error) {
+        console.error('Error fetching user statistics:', error);
+        // Display error message on the page
+        document.getElementById('totalQuizzes').textContent = "Error";
+        document.getElementById('averageScore').textContent = "Error";
+        document.getElementById('totalTime').textContent = "Error";
+        document.getElementById('subjectsCovered').textContent = "Error";
+        
+        // Show error message in all chart containers
+        const containers = ['subjectPerformanceContainer', 'dailyActivityContainer', 
+                           'chapterTimeContainer', 'scoreTrendContainer'];
+        containers.forEach(container => {
+            showNoDataMessage(container, 'Error loading data. Please try again.');
+        });
+        
+        document.getElementById('recentQuizzesContainer').innerHTML = 
+            '<div class="no-data-message">Error loading quiz data. Please try refreshing the page.</div>';
+    }
+}
+
+// Add retry mechanism
+function retryFetch(url, maxRetries = 3) {
+    return new Promise((resolve, reject) => {
+        const attempt = (retryCount) => {
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        resolve(response);
+                    } else {
+                        throw new Error(`Server responded with ${response.status}`);
+                    }
+                })  
+                .catch(error => {
+                    if (retryCount < maxRetries) {
+                        console.log(`Retry attempt ${retryCount + 1} for ${url}`);
+                        setTimeout(() => attempt(retryCount + 1), 1000); // 1 second delay
+                    } else {
+                        reject(error);
+                    }
+                });
+        };
+        attempt(0);
+    });
+}
+        function showNoDataMessage(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="no-data-message">${message}</div>`;
         }
 
         function createSubjectPerformanceChart(data) {
@@ -254,20 +352,37 @@
         }
 
         function createDailyActivityChart(data) {
+            // Sort data by date (ascending)
+            data.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Take only last 14 days for better visibility
+            const recentData = data.slice(-14);
+            
             const ctx = document.getElementById('dailyActivityChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(item => item.date),
+                    labels: recentData.map(item => new Date(item.date).toLocaleDateString()),
                     datasets: [{
                         label: 'Minutes Spent',
-                        data: data.map(item => item.timeSpent),
+                        data: recentData.map(item => item.timeSpent),
                         borderColor: '#34d399',
+                        backgroundColor: 'rgba(52, 211, 153, 0.2)',
+                        fill: true,
                         tension: 0.1
                     }]
                 },
                 options: {
-                    responsive: true
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Minutes'
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -285,26 +400,50 @@
                             '#34d399',
                             '#f472b6',
                             '#fbbf24',
-                            '#a78bfa'
+                            '#a78bfa',
+                            '#4ade80',
+                            '#fb7185',
+                            '#38bdf8',
+                            '#fb923c',
+                            '#818cf8'
                         ]
                     }]
                 },
                 options: {
-                    responsive: true
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: ${value} minutes`;
+                                }
+                            }
+                        }
+                    }
                 }
             });
         }
 
         function createScoreTrendChart(data) {
+            // Sort data by date (ascending)
+            data.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
             const ctx = document.getElementById('scoreTrendChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(item => item.date),
+                    labels: data.map(item => new Date(item.date).toLocaleDateString()),
                     datasets: [{
                         label: 'Score',
                         data: data.map(item => item.score),
                         borderColor: '#f472b6',
+                        backgroundColor: 'rgba(244, 114, 182, 0.2)',
+                        fill: true,
                         tension: 0.1
                     }]
                 },
@@ -313,7 +452,11 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 100
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score (%)'
+                            }
                         }
                     }
                 }

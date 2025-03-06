@@ -52,8 +52,8 @@ class Quiz(db.Model):
     duration = db.Column(db.Integer, nullable=False)  # in minutes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     questions = db.relationship('Question', backref='quiz', lazy=True, cascade="all, delete-orphan")
-    attempts = db.relationship('QuizAttempt', backref='quiz', lazy=True)
-
+    attempts = db.relationship('QuizAttempt', backref='quiz', lazy=True, 
+                              cascade="all, delete-orphan")
     def to_dict(self):
         return {
             'id': self.id,
@@ -95,6 +95,36 @@ class Option(db.Model):
             'id': self.id,
             'option_text': self.option_text
         }
+class QuestionAttempt(db.Model):
+    __tablename__ = 'question_attempt'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempt.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    selected_option_id = db.Column(db.Integer, db.ForeignKey('option.id'), nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=True)
+
+    def __repr__(self):
+        return f'<QuestionAttempt {self.id} for Question {self.question_id}>'
+class QuizAttempt(db.Model):
+    __tablename__ = 'quiz_attempt'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Float, nullable=True)
+    
+    # Relationships
+    user = db.relationship('User', back_populates='quiz_attempts')
+    question_attempts = db.relationship('QuestionAttempt', backref='quiz_attempt', lazy=True, cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f'<QuizAttempt {self.id} by User {self.user_id} for Quiz {self.quiz_id}>'
+
 # Helpers and Decorators
 def get_current_user():
     if 'user_id' in session:
@@ -971,35 +1001,6 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, and_
 
 
-class QuestionAttempt(db.Model):
-    __tablename__ = 'question_attempt'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    quiz_attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempt.id'), nullable=False)
-    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False)
-    end_time = db.Column(db.DateTime, nullable=True)
-    selected_option_id = db.Column(db.Integer, db.ForeignKey('option.id'), nullable=True)
-    is_correct = db.Column(db.Boolean, nullable=True)
-
-    def __repr__(self):
-        return f'<QuestionAttempt {self.id} for Question {self.question_id}>'
-class QuizAttempt(db.Model):
-    __tablename__ = 'quiz_attempt'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False)
-    end_time = db.Column(db.DateTime, nullable=True)
-    score = db.Column(db.Float, nullable=True)
-    
-    # Relationships
-    user = db.relationship('User', back_populates='quiz_attempts')
-    question_attempts = db.relationship('QuestionAttempt', backref='quiz_attempt', lazy=True, cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f'<QuizAttempt {self.id} by User {self.user_id} for Quiz {self.quiz_id}>'
 
 
 @app.route('/user/summary')
@@ -1018,29 +1019,29 @@ def get_user_statistics():
     quiz_attempts = QuizAttempt.query.filter_by(user_id=user.id).all()
     total_quizzes = len(quiz_attempts)
     
-    # Calculate average score
+    # Calculate average score - Fix for null values
     average_score = db.session.query(func.avg(QuizAttempt.score))\
-        .filter_by(user_id=user.id)\
+        .filter(QuizAttempt.user_id == user.id, QuizAttempt.score.isnot(None))\
         .scalar() or 0
         
-    # Calculate total time spent
+    # Calculate total time spent - Add safety check for None values
     total_time = sum(
         (attempt.end_time - attempt.start_time).total_seconds() / 3600 
         for attempt in quiz_attempts 
-        if attempt.end_time
+        if attempt.end_time and attempt.start_time
     )
     
-    # Get subject-wise performance
+    # Get subject-wise performance - Fix join conditions
     subject_performance = db.session.query(
         Subject.name.label('subject'),
         func.avg(QuizAttempt.score).label('averageScore')
-    ).join(Quiz)\
-        .join(QuizAttempt)\
-        .filter(QuizAttempt.user_id == user.id)\
+    ).join(Quiz, Quiz.subject_id == Subject.id)\
+        .join(QuizAttempt, QuizAttempt.quiz_id == Quiz.id)\
+        .filter(QuizAttempt.user_id == user.id, QuizAttempt.score.isnot(None))\
         .group_by(Subject.name)\
         .all()
 
-    # Get daily activity for last 30 days
+    # Get daily activity for last 30 days - Fix date handling
     daily_activity = []
     for i in range(30):
         date = current_date - timedelta(days=i)
@@ -1051,6 +1052,8 @@ def get_user_statistics():
             )/60
         ).filter(
             QuizAttempt.user_id == user.id,
+            QuizAttempt.end_time.isnot(None),
+            QuizAttempt.start_time.isnot(None),
             func.date(QuizAttempt.start_time) == date.date()
         ).scalar() or 0
         
@@ -1058,6 +1061,36 @@ def get_user_statistics():
             'date': date.strftime('%Y-%m-%d'),
             'timeSpent': round(time_spent, 2)
         })
+    
+    # Add Chapter Time data - Fix join conditions and null handling
+    chapter_time = db.session.query(
+        Chapter.name.label('chapter'),
+        (func.sum(
+            func.extract('epoch', QuizAttempt.end_time) - 
+            func.extract('epoch', QuizAttempt.start_time)
+        )/60.0).label('timeSpent')
+    ).join(Quiz, Quiz.chapter_id == Chapter.id)\
+        .join(QuizAttempt, QuizAttempt.quiz_id == Quiz.id)\
+        .filter(
+            QuizAttempt.user_id == user.id,
+            QuizAttempt.end_time.isnot(None),
+            QuizAttempt.start_time.isnot(None)
+        ).group_by(Chapter.name)\
+        .all()
+    
+    # Add Score Trends data - Fix date handling for string dates
+    score_trends = db.session.query(
+        func.date(QuizAttempt.start_time).label('date'),
+        func.avg(QuizAttempt.score).label('score')
+    ).filter(
+        QuizAttempt.user_id == user.id,
+        QuizAttempt.end_time.isnot(None),
+        QuizAttempt.start_time.isnot(None),
+        QuizAttempt.score.isnot(None)
+    ).group_by(func.date(QuizAttempt.start_time))\
+        .order_by(func.date(QuizAttempt.start_time))\
+        .limit(30)\
+        .all()
 
     # Get recent quizzes
     recent_quizzes = db.session.query(
@@ -1065,15 +1098,17 @@ def get_user_statistics():
         Subject.name.label('subject'),
         Chapter.name.label('chapter'),
         QuizAttempt.score,
-        func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time)/60.0.label('timeTaken'),
+        (func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time)/60.0).label('timeTaken'),
         func.count(Question.id).label('totalQuestions')
-    ).join(Quiz)\
-        .join(Subject)\
-        .join(Chapter)\
-        .join(Question)\
+    ).join(Quiz, QuizAttempt.quiz_id == Quiz.id)\
+        .join(Subject, Quiz.subject_id == Subject.id)\
+        .join(Chapter, Quiz.chapter_id == Chapter.id)\
+        .join(Question, Question.quiz_id == Quiz.id)\
         .filter(
             QuizAttempt.user_id == user.id,
-            QuizAttempt.end_time.isnot(None)
+            QuizAttempt.end_time.isnot(None),
+            QuizAttempt.start_time.isnot(None),
+            QuizAttempt.score.isnot(None)
         ).group_by(
             QuizAttempt.id,
             QuizAttempt.start_time,
@@ -1085,29 +1120,38 @@ def get_user_statistics():
         .limit(10)\
         .all()
 
+    # Handle empty result sets gracefully
     return jsonify({
         'totalQuizzes': total_quizzes,
-        'averageScore': round(average_score, 1),
-        'totalTimeHours': round(total_time, 1),
+        'averageScore': round(average_score, 1) if average_score is not None else 0,
+        'totalTimeHours': round(total_time, 1) if total_time is not None else 0,
         'subjectsCovered': len(subject_performance),
         'subjectPerformance': [
-            {'subject': item.subject, 'averageScore': round(item.averageScore, 1)}
+            {'subject': item.subject, 'averageScore': round(item.averageScore, 1) if item.averageScore is not None else 0}
             for item in subject_performance
         ],
         'dailyActivity': daily_activity,
+        'chapterTime': [
+            {'chapter': item.chapter, 'timeSpent': round(item.timeSpent, 1) if item.timeSpent is not None else 0}
+            for item in chapter_time
+        ],
+        'scoretrends': [
+            # Fix: Don't call strftime on item.date as it's already a string
+            {'date': str(item.date), 'score': round(item.score, 1) if item.score is not None else 0}
+            for item in score_trends
+        ],
         'recentQuizzes': [
             {
-                'date': quiz.date.isoformat(),
+                'date': quiz.date.isoformat() if hasattr(quiz.date, 'isoformat') else str(quiz.date),
                 'subject': quiz.subject,
                 'chapter': quiz.chapter,
-                'score': round(quiz.score, 1),
-                'timeTaken': round(quiz.timeTaken, 1),
+                'score': round(quiz.score, 1) if quiz.score is not None else 0,
+                'timeTaken': round(quiz.timeTaken, 1) if quiz.timeTaken is not None else 0,
                 'totalQuestions': quiz.totalQuestions
             }
             for quiz in recent_quizzes
         ]
     })
-
 @app.route('/api/quiz/<int:quiz_id>/time-analysis')
 @login_required
 def get_quiz_time_analysis(quiz_id):
