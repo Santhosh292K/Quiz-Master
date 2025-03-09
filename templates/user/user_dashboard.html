@@ -6,7 +6,7 @@
     <title>User Dashboard - Quiz Master</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/user_navbar.css">
-    <link href="/static/dashboard.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
     <nav class="navbar">
@@ -44,17 +44,27 @@
         </div>
     </nav>
 
-
     <main>
         <div class="dashboard-header">
-            <h1 class="dashboard-title">Available Subjects</h1>
+            <h1 class="dashboard-title">Browse Subjects</h1>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search subjects or chapters...">
+                <button class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
         </div>
 
         <div class="subjects-grid">
             {% for subject in subjects %}
             <div class="subject-card">
                 <div class="subject-header">
-                    <h3 class="subject-title">{{ subject.name }}</h3>
+                    <h3 class="subject-title">
+                        <a href="#" class="subject-link" onclick="showQuizzes('subject', {{ subject.id }}, '{{ subject.name }}'); return false;">
+                            {{ subject.name }}
+                        </a>
+                        <span class="chapter-count">{{ subject.chapters|length }} chapters</span>
+                    </h3>
                 </div>
                 
                 <p class="subject-description">{{ subject.description or 'No description available' }}</p>
@@ -62,18 +72,134 @@
                 <div class="chapters-list">
                     {% for chapter in subject.chapters %}
                     <div class="chapter-item">
-                        <span>{{ chapter.name }}</span>
+                        <span>
+                            <a href="#" class="chapter-link" onclick="showQuizzes('chapter', {{ chapter.id }}, '{{ chapter.name }}'); return false;">
+                                <i class="fas fa-book-open"></i> {{ chapter.name }}
+                            </a>
+                        </span>
                     </div>
                     {% endfor %}
                 </div>
+                
+                
             </div>
             {% else %}
             <div class="empty-state">
+                <i class="fas fa-book"></i>
                 <h3>No subjects available</h3>
-                <p>Please check back later for available subjects</p>
+                <p>There are currently no subjects available in your curriculum. Please check back later.</p>
             </div>
             {% endfor %}
         </div>
+
+        <!-- Modal for Quiz List -->
+        <div id="quizzesModal" class="modal">
+            <div class="modal-content">
+                <h2 id="quizzesModalTitle">Available Quizzes</h2>
+                <div id="quizzesList" class="quizzes-list">
+                    <!-- Quiz items will be populated dynamically -->
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('quizzesModal')">Close</button>
+                </div>
+            </div>
+        </div>
     </main>
+
+    <script>
+        // Function to show quizzes for a subject or chapter
+        function showQuizzes(type, id, name) {
+            const modal = document.getElementById('quizzesModal');
+            const title = document.getElementById('quizzesModalTitle');
+            const list = document.getElementById('quizzesList');
+            
+            // Update modal title with the name of subject/chapter
+            title.textContent = `Quizzes for ${name}`;
+            
+            // Clear previous content
+            list.innerHTML = '<div class="loading">Loading quizzes...</div>';
+            
+            // Show the modal
+            modal.style.display = 'flex';
+            
+            // Fetch quizzes from the server
+            fetch(`/api/${type}/${id}/quizzes`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.quizzes && data.quizzes.length > 0) {
+                        list.innerHTML = '';
+                        
+                        // Create quiz items
+                        data.quizzes.forEach(quiz => {
+                            const quizItem = document.createElement('div');
+                            quizItem.className = 'quiz-item';
+                            
+                            const formattedDate = new Date(quiz.date).toLocaleDateString();
+                            const attempted = quiz.user_attempt ? 
+                                `<div class="quiz-score"><strong>Your Score:</strong> ${quiz.user_attempt.score}%</div>` :
+                                '<div class="quiz-status">Not attempted</div>';
+                            
+                            quizItem.innerHTML = `
+                                <div class="quiz-details">
+                                    <div class="quiz-id"><strong>Quiz ID:</strong> ${quiz.quiz_id}</div>
+                                    <div class="quiz-date"><strong>Date:</strong> ${formattedDate}</div>
+                                    <div class="quiz-duration"><strong>Duration:</strong> ${quiz.duration} minutes</div>
+                                    ${attempted}
+                                </div>
+                                <div class="quiz-actions">
+                                    <a href="/user/quiz" class="btn btn-primary start-quiz-btn">
+                                        <i class="fas fa-play"></i> ${quiz.user_attempt ? 'Retry Quiz' : 'Start Quiz'}
+                                    </a>
+                                </div>
+                            `;
+                            
+                            list.appendChild(quizItem);
+                        });
+                    } else {
+                        list.innerHTML = '<div class="empty-quizzes">No quizzes available for this item.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching quizzes:', error);
+                    list.innerHTML = '<div class="error">Error loading quizzes. Please try again.</div>';
+                });
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const subjectCards = document.querySelectorAll('.subject-card');
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                subjectCards.forEach(card => {
+                    const subjectName = card.querySelector('.subject-title').textContent.toLowerCase();
+                    const chapterItems = card.querySelectorAll('.chapter-item');
+                    let shouldShow = subjectName.includes(searchTerm);
+                    
+                    // Also check if any chapters match
+                    chapterItems.forEach(item => {
+                        if (item.textContent.toLowerCase().includes(searchTerm)) {
+                            shouldShow = true;
+                        }
+                    });
+                    
+                    card.style.display = shouldShow ? 'flex' : 'none';
+                });
+            });
+        });
+    </script>
 </body>
 </html>

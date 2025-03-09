@@ -38,6 +38,9 @@
     <div class="quiz-container">
         <div class="quiz-header">
             <h2 class="quiz-title"><i class="fas fa-tasks"></i> Quiz Management</h2>
+            <div class="search-container">
+                <input type="text" id="quizSearch" class="search-input" placeholder="Search quizzes by title, subject or chapter..." onkeyup="searchQuizzes()">
+            </div>
             <button id="createQuizBtn" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create New Quiz
             </button>
@@ -111,12 +114,34 @@
             </div>
         </div>
 
+        <!-- New Quiz Details Modal -->
+        <div id="quizDetailsModal" class="modal">
+            <div class="quiz-details-content">
+                <h3><i class="fas fa-clipboard-list"></i> <span id="detailsQuizTitle">Quiz Details</span></h3>
+                
+                <div class="quiz-info" id="detailsQuizInfo">
+                    <!-- Quiz information will be populated here -->
+                </div>
+                
+                <h4 class="mt-4 mb-2"><i class="fas fa-question-circle"></i> Questions</h4>
+                <div id="detailsQuestionsContainer">
+                    <!-- Questions will be populated here -->
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <button class="btn btn-secondary" onclick="closeDetailsModal()">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div id="quizList" class="quiz-list"></div>
     </div>
 
     <script>
-        // JavaScript remains the same as in your original code
         let editingQuizId = null;
+        let allQuizzes = [];
 
         function showQuizDetails() {
             document.getElementById('quizDetailsSection').classList.remove('hidden');
@@ -204,52 +229,192 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const quizzes = await response.json();
                 
-                const quizList = document.getElementById('quizList');
-                quizList.innerHTML = '';
+                allQuizzes = await response.json();
+                displayQuizzes(allQuizzes);
                 
-                if (quizzes.length === 0) {
-                    quizList.innerHTML = '<div class="text-center p-4">No quizzes found. Create your first quiz!</div>';
-                    return;
-                }
-                
-                quizzes.forEach(quiz => {
-                    const quizCard = document.createElement('div');
-                    quizCard.className = 'quiz-card';
-                    quizCard.innerHTML = `
-                        <div class="quiz-card-header">
-                            <h3><i class="fas fa-file-alt"></i> ${quiz.quiz_id || 'Untitled Quiz'}</h3>
-                            <div class="quiz-actions">
-                                <button class="btn btn-secondary" onclick="editQuiz(${quiz.id})">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                        <div class="quiz-info">
-                            <div>
-                                <i class="far fa-calendar-alt"></i>
-                                <strong>Date:</strong> ${new Date(quiz.date).toLocaleDateString()}
-                            </div>
-                            <div>
-                                <i class="far fa-clock"></i>
-                                <strong>Duration:</strong> ${quiz.duration} minutes
-                            </div>
-                            <div>
-                                <i class="fas fa-tasks"></i>
-                                <strong>Questions:</strong> ${quiz.questions.length}
-                            </div>
-                        </div>
-                    `;
-                    quizList.appendChild(quizCard);
-                });
             } catch (error) {
                 console.error('Error loading quizzes:', error);
                 document.getElementById('quizList').innerHTML = 
                     '<div class="text-center p-4 text-red-600">Failed to load quizzes. Please try again.</div>';
+            }
+        }
+
+        function displayQuizzes(quizzes) {
+            const quizList = document.getElementById('quizList');
+            quizList.innerHTML = '';
+            
+            if (quizzes.length === 0) {
+                quizList.innerHTML = '<div class="text-center p-4">No quizzes found. Create your first quiz!</div>';
+                return;
+            }
+            
+            quizzes.forEach(quiz => {
+                const quizCard = document.createElement('div');
+                quizCard.className = 'quiz-card';
+                quizCard.innerHTML = `
+                    <div class="quiz-card-header">
+                        <h3><i class="fas fa-file-alt"></i> ${quiz.quiz_id || 'Untitled Quiz'}</h3>
+                        <div class="quiz-actions">
+                            <button class="btn btn-info" onclick="viewQuizDetails(${quiz.id})">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                            <button class="btn btn-secondary" onclick="editQuiz(${quiz.id})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteQuiz(${quiz.id})">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                    <div class="quiz-info">
+                        <div>
+                            <i class="far fa-calendar-alt"></i>
+                            <strong>Date:</strong> ${new Date(quiz.date).toLocaleDateString()}
+                        </div>
+                        <div>
+                            <i class="far fa-clock"></i>
+                            <strong>Duration:</strong> ${quiz.duration} minutes
+                        </div>
+                        <div>
+                            <i class="fas fa-tasks"></i>
+                            <strong>Questions:</strong> ${quiz.questions.length}
+                        </div>
+                    </div>
+                `;
+                quizList.appendChild(quizCard);
+            });
+        }
+
+        function searchQuizzes() {
+            const searchText = document.getElementById('quizSearch').value.toLowerCase();
+            
+            if (!searchText) {
+                displayQuizzes(allQuizzes);
+                return;
+            }
+            
+            const filteredQuizzes = allQuizzes.filter(quiz => 
+                quiz.quiz_id.toLowerCase().includes(searchText)
+            );
+            
+            displayQuizzes(filteredQuizzes);
+        }
+
+        async function viewQuizDetails(quizId) {
+            try {
+                const response = await fetch(`/admin/quiz/${quizId}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const quiz = await response.json();
+                
+                // Populate quiz details
+                document.getElementById('detailsQuizTitle').textContent = quiz.quiz_id;
+                
+                // Get subject and chapter names 
+                const subjectName = document.querySelector(`#subject-select option[value="${quiz.subject_id}"]`)?.textContent || 'Unknown Subject';
+                const chapterName = await getChapterName(quiz.chapter_id);
+                
+                document.getElementById('detailsQuizInfo').innerHTML = `
+                    <div class="quiz-info-grid">
+                        <div>
+                            <i class="fas fa-book"></i>
+                            <strong>Subject:</strong> ${subjectName}
+                        </div>
+                        <div>
+                            <i class="fas fa-bookmark"></i>
+                            <strong>Chapter:</strong> ${chapterName}
+                        </div>
+                        <div>
+                            <i class="far fa-calendar-alt"></i>
+                            <strong>Date:</strong> ${new Date(quiz.date).toLocaleDateString()}
+                        </div>
+                        <div>
+                            <i class="far fa-clock"></i>
+                            <strong>Duration:</strong> ${quiz.duration} minutes
+                        </div>
+                        <div>
+                            <i class="fas fa-question-circle"></i>
+                            <strong>Total Questions:</strong> ${quiz.questions.length}
+                        </div>
+                    </div>
+                `;
+                
+                // Populate questions
+                const questionsContainer = document.getElementById('detailsQuestionsContainer');
+                questionsContainer.innerHTML = '';
+                
+                quiz.questions.forEach((question, index) => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'question-review';
+                    
+                    let optionsHtml = '';
+                    question.options.forEach((option, optIndex) => {
+                        const isCorrect = optIndex === question.correct_option_index;
+                        optionsHtml += `
+                            <div class="option-review ${isCorrect ? 'correct-option' : ''}">
+                                <strong>${String.fromCharCode(65 + optIndex)}.</strong> ${option.option_text}
+                                ${isCorrect ? ' <i class="fas fa-check-circle text-success"></i>' : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    questionDiv.innerHTML = `
+                        <h4>Question ${index + 1}</h4>
+                        <p>${question.question_text}</p>
+                        <div class="options-review">
+                            ${optionsHtml}
+                        </div>
+                        <div class="explanation-box">
+                            <strong><i class="fas fa-info-circle"></i> Explanation:</strong>
+                            <p>${question.explanation}</p>
+                        </div>
+                    `;
+                    
+                    questionsContainer.appendChild(questionDiv);
+                });
+                
+                // Show the modal
+                document.getElementById('quizDetailsModal').style.display = 'block';
+            } catch (error) {
+                console.error('Error viewing quiz details:', error);
+                alert('Failed to load quiz details. Please try again.');
+            }
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('quizDetailsModal').style.display = 'none';
+        }
+
+        async function getChapterName(chapterId) {
+            // First check if chapter select already has this chapter loaded
+            const chapterOption = document.querySelector(`#chapter-select option[value="${chapterId}"]`);
+            if (chapterOption) {
+                return chapterOption.textContent;
+            }
+            
+            // Otherwise fetch chapter info
+            try {
+                // This is a simplified approach - ideally you would have an API endpoint
+                // to fetch chapter by ID directly
+                const subjectsResponse = await fetch('/admin/subjects');
+                if (!subjectsResponse.ok) throw new Error('Failed to fetch subjects');
+                const subjects = await subjectsResponse.json();
+                
+                for (const subject of subjects) {
+                    const chaptersResponse = await fetch(`/admin/subjects/${subject.id}/chapters`);
+                    if (!chaptersResponse.ok) continue;
+                    const chapters = await chaptersResponse.json();
+                    
+                    const chapter = chapters.find(ch => ch.id === chapterId);
+                    if (chapter) {
+                        return chapter.name;
+                    }
+                }
+                
+                return 'Unknown Chapter';
+            } catch (error) {
+                console.error('Error fetching chapter name:', error);
+                return 'Unknown Chapter';
             }
         }
 
@@ -340,7 +505,7 @@
                 })
                 .then(data => {
                     alert('Quiz deleted successfully');
-                    // Refresh the page or update the UI
+                    // Refresh the quiz list
                     loadQuizzes();
                 })
                 .catch(error => {
@@ -465,6 +630,20 @@
             editingQuizId = null;
         }
 
+        // Handle clicks outside modals
+        window.onclick = function(event) {
+            const quizModal = document.getElementById('quizModal');
+            const detailsModal = document.getElementById('quizDetailsModal');
+            
+            if (event.target === detailsModal) {
+                closeDetailsModal();
+            } else if (event.target === quizModal) {
+                if (confirm('Are you sure you want to discard your changes?')) {
+                    closeModal();
+                }
+            }
+        }
+
         // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             loadQuizzes();
@@ -490,15 +669,6 @@
                     await saveQuiz(formData);
                 } catch (error) {
                     alert(error.message);
-                }
-            });
-            
-            // Close modal when clicking outside
-            window.addEventListener('click', (e) => {
-                if (e.target === document.getElementById('quizModal')) {
-                    if (confirm('Are you sure you want to discard your changes?')) {
-                        closeModal();
-                    }
                 }
             });
         });

@@ -550,6 +550,7 @@
     let currentQuestionIndex = 0;
     let questionTimings = {}; // Store question timing data
     let quizData = null;
+    let questionStartTime = null; // Track when user started viewing current question
 
     // Load questions from database via API
     fetch(`/api/quiz/${quizId}/questions`)
@@ -584,6 +585,9 @@
             renderCurrentQuestion();
             renderQuestionGrid();
             loadQuizState();
+            
+            // Start tracking time on first question
+            questionStartTime = Date.now();
         })
         .catch(error => {
             console.error('Error loading quiz questions:', error);
@@ -628,6 +632,18 @@
 
     function renderCurrentQuestion() {
         if (!questions.length) return; // No questions loaded yet
+        
+        // If we're changing questions, record the time spent on the previous question
+        if (questionStartTime !== null) {
+            const previousQuestionId = questions[currentQuestionIndex]?.id;
+            if (previousQuestionId) {
+                const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000); // in seconds
+                questionTimings[previousQuestionId] = formatTimeHHMMSS(timeSpent);
+            }
+        }
+        
+        // Reset the start time for the new question
+        questionStartTime = Date.now();
         
         const question = questions[currentQuestionIndex];
         document.getElementById('current-question-num').textContent = currentQuestionIndex + 1;
@@ -696,16 +712,27 @@
     }
 
     function handleAnswerSubmission(questionId, optionIndex) {
+        // Calculate time spent on this question
+        const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000); // in seconds
+        const formattedTime = formatTimeHHMMSS(timeSpent);
+        
         // Save answer locally
         currentAnswers[questionId] = {
-            selected_option: optionIndex
+            selected_option: optionIndex,
+            time_spent: formattedTime
         };
+        
+        // Reset the question start time
+        questionStartTime = Date.now();
         
         // Send to API
         fetch(`/api/quiz/${quizId}/question/${questionId}/answer`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({selected_option: optionIndex})
+            body: JSON.stringify({
+                selected_option: optionIndex,
+                time_spent: formattedTime
+            })
         })
         .then(response => {
             if (!response.ok) {
@@ -725,6 +752,20 @@
         });
         
         updateUI();
+    }
+
+    // Format seconds into HH:MM:SS
+    function formatTimeHHMMSS(totalSeconds) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        return `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+    }
+    
+    // Helper to pad with leading zeros
+    function padZero(num) {
+        return num.toString().padStart(2, '0');
     }
 
     function updateUI() {
@@ -756,8 +797,19 @@
     }
 
     function submitQuiz() {
+        // Record time spent on the final question before submitting
+        if (questionStartTime !== null && questions.length > 0) {
+            const currentQuestionId = questions[currentQuestionIndex].id;
+            const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+            questionTimings[currentQuestionId] = formatTimeHHMMSS(timeSpent);
+        }
+        
         fetch(`/api/quiz/${quizId}/submit`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                question_timings: questionTimings
+            })
         })
         .then(response => {
             if (!response.ok) {

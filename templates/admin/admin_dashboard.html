@@ -6,428 +6,83 @@
     <title>Admin Dashboard - Quiz Master</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/navbar.css">
+    <link rel="stylesheet" href="/static/admin_dashboard.css">
     <style>
-        :root {
-            --primary-color: #4361ee;
-            --primary-hover: #3a56d4;
-            --danger-color: #ef476f;
-            --success-color: #06d6a0;
-            --background-color: #f8f9fa;
-            --card-background: #ffffff;
-            --text-primary: #2b2d42;
-            --text-secondary: #5a6785;
-            --border-color: #e9ecef;
-            --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            --transition: all 0.25s ease;
-            --header-height: 70px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: var(--background-color);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-
-        /* Main Content */
-        main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-            padding-top: calc(var(--header-height) + 2rem);
-            min-height: 100vh;
-        }
-
+        /* Additional styles for search functionality */
         .dashboard-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.5rem;
         }
-
-        .dashboard-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--text-primary);
+        
+        .search-container {
+            flex-grow: 0; /* Reduced from 1 to 0 to limit growth */
+            margin-right: 1rem;
             position: relative;
-            padding-bottom: 0.5rem;
+            width: 250px; /* Fixed width for the search container */
         }
-
-        .dashboard-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 4px;
-            background: var(--primary-color);
-            border-radius: 2px;
-        }
-
-        .add-subject-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
-            transition: var(--transition);
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
-        }
-
-        .add-subject-btn:hover {
-            background-color: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(67, 97, 238, 0.4);
-        }
-
-        .subjects-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 2rem;
-        }
-
-        .subject-card {
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 1.75rem;
-            box-shadow: var(--card-shadow);
-            transition: var(--transition);
-            border: 1px solid var(--border-color);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .subject-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
-            border-color: #d0d7de;
-        }
-
-        .subject-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1.25rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .subject-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-        }
-
-        .subject-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .action-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 6px;
-            transition: var(--transition);
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .edit-btn:hover {
-            color: var(--primary-color);
-            background-color: rgba(67, 97, 238, 0.1);
-        }
-
-        .delete-btn:hover {
-            color: var(--danger-color);
-            background-color: rgba(239, 71, 111, 0.1);
-        }
-
-        .subject-description {
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            flex-grow: 1;
-        }
-
-        .chapters-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .chapter-item {
-            background-color: rgba(240, 242, 245, 0.8);
-            padding: 0.9rem 1.2rem;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            color: var(--text-primary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: var(--transition);
-            border: 1px solid transparent;
-        }
-
-        .chapter-item:hover {
-            background-color: rgba(240, 242, 245, 1);
-            border-color: var(--border-color);
-        }
-
-        .chapter-actions {
-            display: flex;
-            gap: 0.4rem;
-            opacity: 0.6;
-            transition: var(--transition);
-        }
-
-        .chapter-item:hover .chapter-actions {
-            opacity: 1;
-        }
-
-        .add-chapter-btn {
+        
+        .search-bar {
             width: 100%;
-            padding: 0.9rem;
-            background-color: rgba(240, 242, 245, 0.7);
-            border: 2px dashed #d1d9e6;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-weight: 500;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
+            padding: 0.5rem 1rem 0.5rem 2rem; /* Reduced vertical padding */
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem; /* Reduced font size */
+            transition: border-color 0.2s;
         }
-
-        .add-chapter-btn:hover {
-            background-color: rgba(240, 242, 245, 1);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 5rem 2rem;
-            color: var(--text-secondary);
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            grid-column: 1 / -1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            color: #d1d9e6;
-            margin-bottom: 1rem;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .empty-state p {
-            font-size: 1rem;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(33, 37, 41, 0.7);
-            backdrop-filter: blur(4px);
-            justify-content: center;
-            align-items: center;
-            z-index: 1100;
-            animation: fadeIn 0.2s ease-out;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 2.5rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-            animation: slideUp 0.3s ease-out forwards;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-
-        .modal-content h2 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-            font-weight: 500;
-            font-size: 0.95rem;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.9rem 1rem;
-            border: 1px solid #dbe0e6;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: var(--transition);
-            background-color: #fafbfc;
-            color: var(--text-primary);
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        
+        .search-bar:focus {
+            border-color: #4a90e2;
             outline: none;
-            background-color: white;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
         }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 120px;
+        
+        .search-icon {
+            position: absolute;
+            left: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-size: 0.85rem; /* Smaller icon */
         }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 2rem;
+        
+        .search-bar::placeholder {
+            color: #999;
+            font-size: 0.85rem; /* Smaller placeholder text */
         }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            border: none;
-            transition: var(--transition);
+        
+        .highlighted {
+            background-color: #ffeb3b;
+            border-radius: 2px;
+            padding: 0 2px;
         }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        
+        /* Adjustments to accommodate smaller search bar */
+        .dashboard-title {
+            margin-right: auto; /* Push the title to the left */
         }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-            box-shadow: 0 6px 14px rgba(67, 97, 238, 0.4);
-            transform: translateY(-2px);
+        
+        .add-subject-btn {
+            white-space: nowrap; /* Prevent button text from wrapping */
         }
-
-        .btn-secondary {
-            background-color: #f0f2f5;
-            color: var(--text-secondary);
-            border: 1px solid #dbe0e6;
-        }
-
-        .btn-secondary:hover {
-            background-color: #e4e6eb;
-            color: var(--text-primary);
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .new-subject {
-            animation: fadeIn 0.5s ease-out, slideUp 0.5s ease-out;
-        }
-
-        /* Responsive styles */
+        
+        /* Make sure the dashboard header is responsive */
         @media (max-width: 768px) {
-            .subjects-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .nav-container {
-                padding: 0 1rem;
-            }
-            
-            .nav-links {
-                gap: 0.5rem;
-            }
-            
-            .nav-links a {
-                padding: 0.5rem;
-                font-size: 0.9rem;
-            }
-            
             .dashboard-header {
                 flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-                margin-bottom: 2rem;
+                align-items: stretch;
             }
             
-            .modal-content {
-                padding: 1.5rem;
-                width: 95%;
+            .search-container {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 1rem;
             }
-        }
-
-        /* Badge count for chapters */
-        .chapter-count {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-flex;
-            margin-left: 0.5rem;
+            
+            .dashboard-title {
+                margin-bottom: 1rem;
+            }
         }
     </style>
 </head>
@@ -461,6 +116,12 @@
     <main>
         <div class="dashboard-header">
             <h1 class="dashboard-title">Manage Subjects</h1>
+            
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchInput" class="search-bar" placeholder="Search..." onkeyup="searchSubjectsAndChapters()">
+            </div>
+            
             <button class="add-subject-btn" onclick="openSubjectModal()">
                 <i class="fas fa-plus"></i>
                 Add New Subject
@@ -472,7 +133,9 @@
             <div class="subject-card">
                 <div class="subject-header">
                     <h3 class="subject-title">
-                        {{ subject.name }}
+                        <a href="#" class="subject-link" onclick="showQuizzes('subject', {{ subject.id }}, '{{ subject.name }}'); return false;">
+                            {{ subject.name }}
+                        </a>
                         <span class="chapter-count">{{ subject.chapters|length }} chapters</span>
                     </h3>
                     <div class="subject-actions">
@@ -492,7 +155,11 @@
                 <div class="chapters-list">
                     {% for chapter in subject.chapters %}
                     <div class="chapter-item">
-                        <span><i class="fas fa-book-open"></i> {{ chapter.name }}</span>
+                        <span>
+                            <a href="#" class="chapter-link" onclick="showQuizzes('chapter', {{ chapter.id }}, '{{ chapter.name }}'); return false;">
+                                <i class="fas fa-book-open"></i> {{ chapter.name }}
+                            </a>
+                        </span>
                         <div class="chapter-actions">
                             <button class="action-btn edit-btn" onclick="openEditChapterModal({{ chapter.id }}, '{{ chapter.name }}', '{{ chapter.description }}')">
                                 <i class="fas fa-edit"></i>
@@ -561,6 +228,19 @@
                 </form>
             </div>
         </div>
+
+        <!-- New Modal for Quiz List -->
+        <div id="quizzesModal" class="modal">
+            <div class="modal-content">
+                <h2 id="quizzesModalTitle">Quizzes</h2>
+                <div id="quizzesList" class="quizzes-list">
+                    <!-- Quiz items will be populated dynamically -->
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('quizzesModal')">Close</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -592,6 +272,164 @@
             form.querySelector('#chapterDescription').value = description;
             
             modal.style.display = 'flex';
+        }
+
+        // Search functionality
+        function searchSubjectsAndChapters() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
+            const subjectCards = document.querySelectorAll('.subject-card');
+            
+            if (searchValue === '') {
+                // If search is empty, show all cards and remove highlights
+                subjectCards.forEach(card => {
+                    card.style.display = 'block';
+                    removeHighlights(card);
+                });
+                return;
+            }
+            
+            let foundMatch = false;
+            
+            subjectCards.forEach(card => {
+                const subjectName = card.querySelector('.subject-title').textContent.toLowerCase();
+                const subjectDescription = card.querySelector('.subject-description').textContent.toLowerCase();
+                const chapterItems = card.querySelectorAll('.chapter-item');
+                
+                let subjectMatch = subjectName.includes(searchValue) || subjectDescription.includes(searchValue);
+                let chapterMatch = false;
+                
+                // Check chapters
+                chapterItems.forEach(item => {
+                    const chapterName = item.querySelector('.chapter-link').textContent.toLowerCase();
+                    if (chapterName.includes(searchValue)) {
+                        chapterMatch = true;
+                        highlightText(item.querySelector('.chapter-link'), searchValue);
+                    } else {
+                        removeHighlights(item);
+                    }
+                });
+                
+                // Show or hide based on matches
+                if (subjectMatch || chapterMatch) {
+                    card.style.display = 'block';
+                    foundMatch = true;
+                    
+                    // Highlight matching text
+                    if (subjectMatch) {
+                        highlightText(card.querySelector('.subject-title'), searchValue);
+                        highlightText(card.querySelector('.subject-description'), searchValue);
+                    } else {
+                        removeHighlights(card.querySelector('.subject-title'));
+                        removeHighlights(card.querySelector('.subject-description'));
+                    }
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Show message if no matches found
+            const emptyState = document.querySelector('.empty-state');
+            if (!foundMatch && !emptyState) {
+                const noResultsElement = document.createElement('div');
+                noResultsElement.className = 'empty-state search-no-results';
+                noResultsElement.innerHTML = `
+                    <i class="fas fa-search"></i>
+                    <h3>No results found</h3>
+                    <p>No subjects or chapters match your search query. Try a different search term.</p>
+                `;
+                document.querySelector('.subjects-grid').appendChild(noResultsElement);
+            } else if (foundMatch) {
+                const noResultsElement = document.querySelector('.search-no-results');
+                if (noResultsElement) {
+                    noResultsElement.remove();
+                }
+            }
+        }
+        
+        function highlightText(element, searchText) {
+            if (!element) return;
+            
+            const content = element.innerHTML;
+            const searchPattern = new RegExp('(' + escapeRegExp(searchText) + ')', 'gi');
+            
+            // Don't highlight if already highlighted or if content contains HTML tags
+            if (content.includes('highlighted') || /<\/?[a-z][\s\S]*>/i.test(content)) {
+                return;
+            }
+            
+            const newContent = content.replace(searchPattern, '<span class="highlighted">$1</span>');
+            element.innerHTML = newContent;
+        }
+        
+        function removeHighlights(element) {
+            if (!element) return;
+            
+            const highlighted = element.querySelectorAll('.highlighted');
+            highlighted.forEach(span => {
+                const parent = span.parentNode;
+                parent.replaceChild(document.createTextNode(span.textContent), span);
+                // Normalize to merge adjacent text nodes
+                parent.normalize();
+            });
+        }
+        
+        // Escape special characters for regex
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // New function to show quizzes for a subject or chapter
+        function showQuizzes(type, id, name) {
+            const modal = document.getElementById('quizzesModal');
+            const title = document.getElementById('quizzesModalTitle');
+            const list = document.getElementById('quizzesList');
+            
+            // Update modal title with the name of subject/chapter
+            title.textContent = `Quizzes for ${name}`;
+            
+            // Clear previous content
+            list.innerHTML = '<div class="loading">Loading quizzes...</div>';
+            
+            // Show the modal
+            modal.style.display = 'flex';
+            
+            // Fetch quizzes from the server
+            fetch(`/api/${type}/${id}/quizzes`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.quizzes && data.quizzes.length > 0) {
+                        list.innerHTML = '';
+                        
+                        // Create quiz items
+                        data.quizzes.forEach(quiz => {
+                            const quizItem = document.createElement('div');
+                            quizItem.className = 'quiz-item';
+                            
+                            const formattedDate = new Date(quiz.date).toLocaleDateString();
+                            
+                            quizItem.innerHTML = `
+                                <div class="quiz-details">
+                                    <div class="quiz-id"><strong>ID:</strong> ${quiz.quiz_id}</div>
+                                    <div class="quiz-date"><strong>Date:</strong> ${formattedDate}</div>
+                                    <div class="quiz-duration"><strong>Duration:</strong> ${quiz.duration} minutes</div>
+                                </div>
+                                <div class="quiz-actions">
+                                    <a href="/admin/quiz/${quiz.id}/view" class="btn btn-primary view-quiz-btn">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </div>
+                            `;
+                            
+                            list.appendChild(quizItem);
+                        });
+                    } else {
+                        list.innerHTML = '<div class="empty-quizzes">No quizzes available for this item.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching quizzes:', error);
+                    list.innerHTML = '<div class="error">Error loading quizzes. Please try again.</div>';
+                });
         }
 
         // Add form submission handling with validation and error feedback

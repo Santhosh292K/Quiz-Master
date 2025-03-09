@@ -133,6 +133,38 @@
         .actions-cell {
             display: flex;
             gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        
+        /* Search bar styles */
+        .search-container {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            max-width: 500px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            font-size: 1rem;
+        }
+        
+        .search-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-btn i {
+            margin-right: 0.5rem;
         }
     </style>
 </head>
@@ -194,15 +226,24 @@
         </div>
         
         <h2 class="section-title">Existing Users</h2>
+        
+        <!-- Search bar -->
+        <div class="search-container">
+            <input type="text" id="userSearch" class="search-input" placeholder="Search users by name, email or qualification..." onkeyup="searchUsers()">
+            <button class="search-btn">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+        
         {% if users %}
-        <table class="users-table">
+        <table class="users-table" id="usersTable">
             <thead>
                 <tr>
                     <th>Full Name</th>
                     <th>Email</th>
                     <th>Qualification</th>
                     <th>Date of Birth</th>
-                    <th>Actions</th>
+                    <th style="text-align: right;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -231,5 +272,43 @@
         </div>
         {% endif %}
     </main>
+
+    <script>
+        function searchUsers() {
+            // Get the search input value
+            const input = document.getElementById('userSearch');
+            const filter = input.value.toUpperCase();
+            
+            // Get the table and rows
+            const table = document.getElementById('usersTable');
+            const rows = table.getElementsByTagName('tr');
+            
+            // Loop through all table rows except the header
+            for (let i = 1; i < rows.length; i++) {
+                // Get cells that contain searchable content (name, email, qualification)
+                const nameCell = rows[i].getElementsByTagName('td')[0];
+                const emailCell = rows[i].getElementsByTagName('td')[1];
+                const qualificationCell = rows[i].getElementsByTagName('td')[2];
+                
+                if (nameCell && emailCell && qualificationCell) {
+                    const nameValue = nameCell.textContent || nameCell.innerText;
+                    const emailValue = emailCell.textContent || emailCell.innerText;
+                    const qualificationValue = qualificationCell.textContent || qualificationCell.innerText;
+                    
+                    // Check if any of the fields match the search term
+                    if (nameValue.toUpperCase().indexOf(filter) > -1 || 
+                        emailValue.toUpperCase().indexOf(filter) > -1 || 
+                        qualificationValue.toUpperCase().indexOf(filter) > -1) {
+                        rows[i].style.display = "";
+                    } else {
+                        rows[i].style.display = "none";
+                    }
+                }
+            }
+        }
+        
+        // Add event listener to search button
+        document.querySelector('.search-btn').addEventListener('click', searchUsers);
+    </script>
 </body>
 </html>

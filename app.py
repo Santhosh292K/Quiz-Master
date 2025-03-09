@@ -492,7 +492,48 @@ def get_chapters(subject_id):
     except Exception as e:
         print(f"Error fetching chapters: {str(e)}")
         return jsonify({'error': 'Failed to fetch chapters'}), 500
+# Add these routes to your Flask application
 
+from flask import jsonify
+
+@app.route('/api/subject/<int:subject_id>/quizzes')
+def get_subject_quizzes(subject_id):
+    """API endpoint to get all quizzes for a specific subject"""
+    quizzes = Quiz.query.filter_by(subject_id=subject_id).all()
+    return jsonify({
+        'quizzes': [
+            {
+                'id': quiz.id,
+                'quiz_id': quiz.quiz_id,
+                'date': quiz.date.isoformat(),
+                'duration': quiz.duration,
+                'chapter_id': quiz.chapter_id
+            } for quiz in quizzes
+        ]
+    })
+
+@app.route('/api/chapter/<int:chapter_id>/quizzes')
+def get_chapter_quizzes(chapter_id):
+    """API endpoint to get all quizzes for a specific chapter"""
+    quizzes = Quiz.query.filter_by(chapter_id=chapter_id).all()
+    return jsonify({
+        'quizzes': [
+            {
+                'id': quiz.id,
+                'quiz_id': quiz.quiz_id,
+                'date': quiz.date.isoformat(),
+                'duration': quiz.duration,
+                'subject_id': quiz.subject_id
+            } for quiz in quizzes
+        ]
+    })
+
+@app.route('/admin/quiz/<int:quiz_id>/view')
+def view_quiz(quiz_id):
+    """Route to view a specific quiz"""
+    quiz = Quiz.query.get_or_404(quiz_id)
+    # You can implement this page based on your quiz viewing requirements
+    return render_template('admin/admin_quiz.html', quiz=quiz)
 @app.route('/admin/quizzes', methods=['GET'])
 @admin_required
 def get_quizzes():
@@ -583,7 +624,7 @@ def update_quiz(quiz_id):
         # Create new questions and options
         for q_data in data['questions']:
             question = Question(
-                quiz_id=quiz.id,
+                quiz_id=quiz.id,    
                 question_text=q_data['question_text'],
                 correct_option_index=q_data['correct_option_index'],
                 explanation=q_data['explanation']
@@ -934,6 +975,38 @@ def admin_summary():
         score_distribution=score_distribution,
         time_distribution=time_distribution
     )
+@app.route('/api/quiz/<quiz_id>/attempts')
+@admin_required
+def get_quiz_user_attempts(quiz_id):
+    # Find the quiz by quiz_id
+    quiz = Quiz.query.filter_by(quiz_id=quiz_id).first_or_404()
+    
+    # Get all attempts for this quiz with user information
+    user_attempts = db.session.query(
+        User.full_name.label('user_name'),
+        QuizAttempt.score,
+        db.func.extract('epoch', QuizAttempt.end_time - QuizAttempt.start_time).label('time_taken_seconds'),
+        QuizAttempt.start_time
+    ).join(
+        User, User.id == QuizAttempt.user_id
+    ).filter(
+        QuizAttempt.quiz_id == quiz.id,
+        QuizAttempt.end_time != None  # Only include completed attempts
+    ).order_by(
+        QuizAttempt.score.desc()
+    ).all()
+    
+    # Convert to minutes and prepare response
+    result = []
+    for attempt in user_attempts:
+        result.append({
+            'user_name': attempt.user_name,
+            'score': attempt.score,
+            'time_taken': attempt.time_taken_seconds / 60,  # Convert seconds to minutes
+            'start_time': attempt.start_time.isoformat() if attempt.start_time else None
+        })
+    
+    return jsonify(result)
 @app.route('/user/quiz')
 @login_required
 def user_quiz():

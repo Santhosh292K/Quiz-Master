@@ -8,6 +8,144 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Alternative Quiz Attempt Modal Styles */
+#quizAttemptModal {
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+#quizAttemptModal:not(.hidden) {
+  opacity: 1;
+  visibility: visible;
+}
+
+#quizAttemptModal.hidden {
+  display: none;
+}
+
+#quizAttemptModal .relative {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#quizAttemptModal:not(.hidden) .relative {
+  transform: scale(1);
+}
+
+/* Custom modal header */
+#modalTitle {
+  position: relative;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+#modalTitle:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  border-radius: 3px;
+}
+
+/* Close button styling */
+#closeModal {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background-color: #f3f4f6;
+}
+
+#closeModal:hover {
+  background-color: #e5e7eb;
+  transform: rotate(90deg);
+}
+
+#closeModal i {
+  color: #6b7280;
+}
+
+/* Table styling */
+#quizAttemptModal table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+#quizAttemptModal th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+  color: #4b5563;
+  padding: 12px 16px;
+}
+
+#quizAttemptModal td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+#quizAttemptModal tr:last-child td {
+  border-bottom: none;
+}
+
+#quizAttemptModal tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+#quizAttemptModal tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+/* Modal info section styling */
+#quizAttemptModal .flex {
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+#quizAttemptModal .font-semibold {
+  color: #4b5563;
+}
+
+/* Loading and empty states */
+#noAttemptsMessage {
+  padding: 48px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  #quizAttemptModal .relative {
+    width: 95%;
+    padding: 16px;
+  }
+  
+  #quizAttemptModal th,
+  #quizAttemptModal td {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
+}
+    </style>
 </head>
 <body class="bg-gray-100">
     <nav class="navbar">
@@ -146,7 +284,13 @@
                     </thead>
                     <tbody>
                         {% for quiz in quiz_attempts_data %}
-                        <tr>
+                        <tr class="quiz-attempt-row" 
+                            data-quiz-id="{{ quiz.quiz_id }}"
+                            data-subject="{{ quiz.subject_name }}"
+                            data-chapter="{{ quiz.chapter_name }}"
+                            data-attempts="{{ quiz.attempts }}"
+                            data-avg-score="{{ quiz.average_score|round(1) }}"
+                            data-avg-time="{{ quiz.average_time|round(1) }}">
                             <td class="py-2 px-4 border-b border-gray-200">{{ quiz.quiz_id }}</td>
                             <td class="py-2 px-4 border-b border-gray-200">{{ quiz.subject_name }}</td>
                             <td class="py-2 px-4 border-b border-gray-200">{{ quiz.chapter_name }}</td>
@@ -159,6 +303,48 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+        <div id="quizAttemptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <div class="flex justify-between items-center pb-3">
+                    <h3 class="text-xl font-semibold text-gray-900" id="modalTitle">Quiz Attempt Details</h3>
+                    <button id="closeModal" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <i class="fas fa-times p-1"></i>
+                    </button>
+                </div>
+                <div class="mt-2 text-gray-600">
+                    <div class="flex flex-col md:flex-row justify-between mb-4">
+                        <div>
+                            <p><span class="font-semibold">Quiz ID:</span> <span id="modalQuizId"></span></p>
+                            <p><span class="font-semibold">Subject:</span> <span id="modalSubject"></span></p>
+                            <p><span class="font-semibold">Chapter:</span> <span id="modalChapter"></span></p>
+                        </div>
+                        <div class="mt-2 md:mt-0">
+                            <p><span class="font-semibold">Total Attempts:</span> <span id="modalTotalAttempts"></span></p>
+                            <p><span class="font-semibold">Average Score:</span> <span id="modalAvgScore"></span>%</p>
+                            <p><span class="font-semibold">Average Time:</span> <span id="modalAvgTime"></span> min</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead>
+                                <tr>
+                                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Student</th>
+                                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Score (%)</th>
+                                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time Taken (min)</th>
+                                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Attempted</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userAttemptsTableBody">
+                                <!-- User attempts will be loaded here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noAttemptsMessage" class="hidden py-4 text-center text-gray-500">
+                        No detailed user attempt data available.
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -385,6 +571,114 @@
                 }
             });
         });
+        document.addEventListener('DOMContentLoaded', function() {
+        // Make the quiz attempt rows clickable
+        const quizRows = document.querySelectorAll('.quiz-attempt-row');
+        quizRows.forEach(row => {
+            row.classList.add('cursor-pointer', 'hover:bg-gray-50');
+            row.addEventListener('click', function() {
+                const quizId = this.dataset.quizId;
+                const subject = this.dataset.subject;
+                const chapter = this.dataset.chapter;
+                const attempts = this.dataset.attempts;
+                const avgScore = this.dataset.avgScore;
+                const avgTime = this.dataset.avgTime;
+                
+                openQuizAttemptModal(quizId, subject, chapter, attempts, avgScore, avgTime);
+            });
+        });
+        
+        // Close modal on clicking the close button
+        document.getElementById('closeModal').addEventListener('click', function() {
+            document.getElementById('quizAttemptModal').classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('quizAttemptModal');
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+    
+    // Function to open the modal and load user attempts
+    function openQuizAttemptModal(quizId, subject, chapter, attempts, avgScore, avgTime) {
+        // Set modal title and info
+        document.getElementById('modalQuizId').textContent = quizId;
+        document.getElementById('modalSubject').textContent = subject;
+        document.getElementById('modalChapter').textContent = chapter;
+        document.getElementById('modalTotalAttempts').textContent = attempts;
+        document.getElementById('modalAvgScore').textContent = avgScore;
+        document.getElementById('modalAvgTime').textContent = avgTime;
+        
+        // Fetch user attempts for this quiz
+        fetchQuizUserAttempts(quizId);
+        
+        // Show the modal
+        document.getElementById('quizAttemptModal').classList.remove('hidden');
+    }
+    
+    // Function to fetch user attempts for a specific quiz
+    function fetchQuizUserAttempts(quizId) {
+        const tableBody = document.getElementById('userAttemptsTableBody');
+        const noAttemptsMessage = document.getElementById('noAttemptsMessage');
+        
+        // Clear previous content
+        tableBody.innerHTML = '';
+        
+        // Show loading indicator
+        tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-500">Loading user attempts...</td></tr>';
+        
+        // Fetch user attempts from the server
+        fetch(`/api/quiz/${quizId}/attempts`)
+            .then(response => response.json())
+            .then(data => {
+                tableBody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    noAttemptsMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                noAttemptsMessage.classList.add('hidden');
+                
+                // Add user attempts to the table
+                data.forEach(attempt => {
+                    const row = document.createElement('tr');
+                    
+                    // Format the date
+                    const attemptDate = new Date(attempt.start_time);
+                    const formattedDate = attemptDate.toLocaleDateString() + ' ' + 
+                                         attemptDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    // Add score color classes based on score value
+                    let scoreClass = '';
+                    if (attempt.score >= 80) {
+                        scoreClass = 'text-green-600 font-semibold';
+                    } else if (attempt.score >= 60) {
+                        scoreClass = 'text-blue-600';
+                    } else if (attempt.score >= 40) {
+                        scoreClass = 'text-amber-600';
+                    } else {
+                        scoreClass = 'text-red-600 font-semibold';
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="py-2 px-4 border-b border-gray-200">${attempt.user_name}</td>
+                        <td class="py-2 px-4 border-b border-gray-200 ${scoreClass}">${attempt.score.toFixed(1)}%</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${attempt.time_taken.toFixed(1)}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${formattedDate}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error("Error fetching user attempts:", error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-red-500">Error loading user attempts. Please try again.</td></tr>';
+            });
+    }
     </script>
 </body>
 </html>

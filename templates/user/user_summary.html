@@ -202,20 +202,22 @@
         <div class="chart-container">
             <h3>Recent Quiz Performance</h3>
             <div id="recentQuizzesContainer">
-                <table class="performance-table">
-                    <thead>
-                        <tr>
-                            <th>Quiz Date</th>
-                            <th>Subject</th>
-                            <th>Chapter</th>
-                            <th>Score</th>
-                            <th>Time Taken</th>
-                            <th>Questions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="quizPerformanceBody">
-                    </tbody>
-                </table>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="performance-table">
+                        <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                            <tr>
+                                <th>Quiz Date</th>
+                                <th>Subject</th>
+                                <th>Chapter</th>
+                                <th>Score</th>
+                                <th>Time Taken</th>
+                                <th>Questions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quizPerformanceBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -464,27 +466,51 @@ function retryFetch(url, maxRetries = 3) {
         }
 
         function populateQuizTable(quizzes) {
-            const tbody = document.getElementById('quizPerformanceBody');
-            tbody.innerHTML = '';
-            
-            quizzes.forEach(quiz => {
-                const row = document.createElement('tr');
-                const scoreClass = quiz.score >= 80 ? 'score-good' : 
-                                 quiz.score >= 60 ? 'score-average' : 
-                                 'score-poor';
-                
-                row.innerHTML = `
-                    <td>${new Date(quiz.date).toLocaleDateString()}</td>
-                    <td>${quiz.subject}</td>
-                    <td>${quiz.chapter}</td>
-                    <td><span class="score-badge ${scoreClass}">${quiz.score}%</span></td>
-                    <td>${quiz.timeTaken} min</td>
-                    <td>${quiz.totalQuestions}</td>
-                `;
-                tbody.appendChild(row);
-            });
+    const tbody = document.getElementById('quizPerformanceBody');
+    tbody.innerHTML = '';
+    
+    // Display all quizzes (the container has scrolling)
+    quizzes.forEach(quiz => {
+        const row = document.createElement('tr');
+        const scoreClass = quiz.score >= 80 ? 'score-good' : 
+                          quiz.score >= 60 ? 'score-average' : 
+                          'score-poor';
+        
+        // Format the time properly in HH:MM:SS format
+        let formattedTime;
+        if (quiz.timeTaken !== null && quiz.timeTaken !== undefined) {
+            // Convert minutes to seconds
+            const totalSeconds = Math.abs(quiz.timeTaken * 60);
+            formattedTime = formatTimeHMS(totalSeconds);
+        } else {
+            formattedTime = "00:00:00";
         }
+        
+        row.innerHTML = `
+            <td>${new Date(quiz.date).toLocaleDateString()}</td>
+            <td>${quiz.subject}</td>
+            <td>${quiz.chapter}</td>
+            <td><span class="score-badge ${scoreClass}">${quiz.score}%</span></td>
+            <td>${formattedTime}</td>
+            <td>${quiz.totalQuestions}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
 
+// Helper function to format seconds to HH:MM:SS
+function formatTimeHMS(totalSeconds) {
+    // Ensure we're working with a number
+    totalSeconds = Number(totalSeconds) || 0;
+    
+    // Calculate hours, minutes, seconds
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    
+    // Format with leading zeros
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
         // Initialize the dashboard
         fetchUserStats();
     </script>
