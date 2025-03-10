@@ -12,7 +12,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
-
 class User(db.Model):
     __table_args__ = {'extend_existing': True}
     
@@ -23,7 +22,12 @@ class User(db.Model):
     qualification = db.Column(db.String(100), nullable=False)
     dob = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    quiz_attempts = db.relationship('QuizAttempt', back_populates='user', lazy=True)
+    
+    # Add cascade delete
+    quiz_attempts = db.relationship(
+        'QuizAttempt', back_populates='user', lazy=True, 
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -1099,7 +1103,7 @@ def get_user_statistics():
         
     # Calculate total time spent - Add safety check for None values
     total_time = sum(
-        (attempt.end_time - attempt.start_time).total_seconds() / 3600 
+        (attempt.end_time - attempt.start_time).total_seconds()
         for attempt in quiz_attempts 
         if attempt.end_time and attempt.start_time
     )
@@ -1219,7 +1223,7 @@ def get_user_statistics():
                 'subject': quiz.subject,
                 'chapter': quiz.chapter,
                 'score': round(quiz.score, 1) if quiz.score is not None else 0,
-                'timeTaken': round(quiz.timeTaken, 1) if quiz.timeTaken is not None else 0,
+                'timeTaken': round(quiz.timeTaken) if quiz.timeTaken is not None else 0,
                 'totalQuestions': quiz.totalQuestions
             }
             for quiz in recent_quizzes
@@ -1254,7 +1258,7 @@ def get_quiz_time_analysis(quiz_id):
             {
                 'questionId': q.id,
                 'questionText': q.text,
-                'timeSpentSeconds': round(q.time_spent, 1),
+                'timeSpentSeconds':q.time_spent,
                 'isCorrect': q.is_correct
             }
             for q in question_timing
@@ -1637,4 +1641,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_admin_account()
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0')
